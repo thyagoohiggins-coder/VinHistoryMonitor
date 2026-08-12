@@ -34,10 +34,26 @@ h1 {
   background: #ececec;
 }
 
-.count {
-  margin: 0 0 8px;
+.stats {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  background: #f0f7f2;
+  border: 1px solid #d7ead9;
+  border-radius: 8px;
+}
+
+.count-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0b8043;
+}
+
+.count-label {
   font-size: 12px;
-  color: #666;
+  color: #4a4a4a;
 }
 
 .history-list {

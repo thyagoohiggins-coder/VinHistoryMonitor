@@ -2,7 +2,9 @@ const STORAGE_KEY = "vinHistory";
 
 const listEl = document.getElementById("historyList");
 const emptyStateEl = document.getElementById("emptyState");
-const countEl = document.getElementById("count");
+const statsEl = document.getElementById("stats");
+const countNumberEl = document.getElementById("countNumber");
+const countLabelEl = document.getElementById("countLabel");
 const clearBtn = document.getElementById("clearBtn");
 
 function formatTimestamp(timestamp) {
@@ -21,11 +23,13 @@ function render(history) {
   listEl.innerHTML = "";
 
   const isEmpty = !history || history.length === 0;
+  const count = isEmpty ? 0 : history.length;
+
   emptyStateEl.style.display = isEmpty ? "block" : "none";
   listEl.style.display = isEmpty ? "none" : "block";
-  countEl.textContent = isEmpty
-    ? ""
-    : `${history.length} VIN${history.length === 1 ? "" : "s"} unico${history.length === 1 ? "" : "s"} registrado${history.length === 1 ? "" : "s"}`;
+  statsEl.style.display = isEmpty ? "none" : "flex";
+  countNumberEl.textContent = String(count);
+  countLabelEl.textContent = `VIN${count === 1 ? "" : "s"} unico${count === 1 ? "" : "s"} registrado${count === 1 ? "" : "s"}`;
 
   if (isEmpty) {
     return;

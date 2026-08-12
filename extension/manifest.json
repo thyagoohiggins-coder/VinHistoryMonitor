@@ -5,6 +5,9 @@
   "description": "Monitora o campo VIN de um formulario do Google Forms, registra cada valor inserido com a hora e remove VINs duplicados automaticamente.",
   "permissions": ["storage"],
   "host_permissions": ["https://docs.google.com/forms/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["https://docs.google.com/forms/*"],
