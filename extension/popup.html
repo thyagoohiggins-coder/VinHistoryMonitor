@@ -8,7 +8,6 @@
   <body>
     <header>
       <h1>Historico de VIN</h1>
-      <button id="clearBtn" title="Limpar historico">Limpar</button>
     </header>
 
     <div id="stats" class="stats">
@@ -16,12 +15,41 @@
       <span id="countLabel" class="count-label">VINs registrados</span>
     </div>
 
+    <section class="settings">
+      <label class="switch-row">
+        <span>Remover VINs duplicados automaticamente</span>
+        <input type="checkbox" id="dedupeToggle" />
+      </label>
+      <p class="hint">
+        Desativado por padrao: todos os VINs ficam no historico, mesmo os
+        repetidos (destacados abaixo). Ative para manter apenas o registro
+        mais recente de cada VIN.
+      </p>
+    </section>
+
+    <section class="actions">
+      <button id="openCalendarBtn">Ver calendario 2026/2027</button>
+    </section>
+
+    <section class="delete-day">
+      <label for="dayPicker">Apagar VINs de um dia especifico</label>
+      <div class="delete-day-row">
+        <input type="date" id="dayPicker" />
+        <button id="deleteDayBtn">Apagar dia</button>
+      </div>
+    </section>
+
     <ul id="historyList" class="history-list"></ul>
 
     <p id="emptyState" class="empty-state">
       Nenhum VIN registrado ainda. Preencha o campo VIN no formulario para comecar.
     </p>
 
+    <button id="clearBtn" class="clear-all-btn" title="Apagar todo o historico">
+      Apagar historico geral
+    </button>
+
+    <script src="storage.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

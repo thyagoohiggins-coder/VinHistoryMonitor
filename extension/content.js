@@ -1,34 +1,32 @@
 // Monitora o campo "VIN" de um formulario do Google Forms e grava um
-// historico com timestamp, removendo VINs duplicados automaticamente.
+// historico com timestamp. A remocao automatica de duplicatas e opcional
+// (configuravel no popup da extensao, desativada por padrao).
 
-const STORAGE_KEY = "vinHistory";
 const VIN_LABEL_REGEX = /\bVIN\b/i;
 const SAVE_DEBOUNCE_MS = 1200;
 
 let debounceTimer = null;
 let lastSavedValue = "";
 
-function normalizeVin(value) {
-  return (value || "").trim().toUpperCase();
-}
-
 async function saveVin(rawValue) {
-  const vin = normalizeVin(rawValue);
+  const vin = vinNormalize(rawValue);
   if (!vin || vin === lastSavedValue) {
     return;
   }
 
-  const { [STORAGE_KEY]: history = [] } = await chrome.storage.local.get(STORAGE_KEY);
+  const settings = await vinGetSettings();
+  const history = await vinGetHistory();
 
-  // Remove qualquer entrada anterior com o mesmo VIN (remocao automatica de duplicatas)
-  const deduped = history.filter((entry) => entry.vin !== vin);
+  const updated = settings.dedupeEnabled
+    ? history.filter((entry) => entry.vin !== vin)
+    : history.slice();
 
-  deduped.unshift({
+  updated.unshift({
     vin,
     timestamp: Date.now(),
   });
 
-  await chrome.storage.local.set({ [STORAGE_KEY]: deduped });
+  await vinSetHistory(updated);
   lastSavedValue = vin;
 }
 
