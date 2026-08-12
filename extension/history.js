@@ -11,7 +11,6 @@ const dayPanel = document.getElementById("dayPanel");
 const dayPanelTitle = document.getElementById("dayPanelTitle");
 const dayPanelList = document.getElementById("dayPanelList");
 const closeDayPanelBtn = document.getElementById("closeDayPanel");
-const deleteDayPanelBtn = document.getElementById("deleteDayPanelBtn");
 
 let currentHistory = [];
 let selectedDateKey = null;
@@ -177,6 +176,16 @@ function openDayPanel(dateKey) {
         vinRow.appendChild(tag);
       }
 
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-entry-btn";
+      deleteBtn.title = "Apagar este VIN";
+      deleteBtn.setAttribute("aria-label", "Apagar este VIN");
+      deleteBtn.textContent = "\u{1F5D1}️";
+      deleteBtn.addEventListener("click", async () => {
+        await vinDeleteEntry(entry.timestamp);
+      });
+      vinRow.appendChild(deleteBtn);
+
       const timeEl = document.createElement("div");
       timeEl.className = "time";
       timeEl.textContent = formatTime(entry.timestamp);
@@ -197,24 +206,6 @@ function closeDayPanel() {
 
 closeDayPanelBtn.addEventListener("click", closeDayPanel);
 
-deleteDayPanelBtn.addEventListener("click", async () => {
-  if (!selectedDateKey) {
-    return;
-  }
-
-  const remaining = currentHistory.filter(
-    (entry) => vinDateKey(entry.timestamp) !== selectedDateKey
-  );
-
-  if (remaining.length === currentHistory.length) {
-    alert("Nenhum VIN encontrado nesse dia.");
-    return;
-  }
-
-  await vinSetHistory(remaining);
-  closeDayPanel();
-});
-
 clearAllBtn.addEventListener("click", async () => {
   if (!confirm("Apagar todo o historico de VINs? Essa acao nao pode ser desfeita.")) {
     return;
@@ -223,8 +214,15 @@ clearAllBtn.addEventListener("click", async () => {
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[VIN_STORAGE_KEY]) {
-    renderCalendar(changes[VIN_STORAGE_KEY].newValue || []);
+  if (area !== "local" || !changes[VIN_STORAGE_KEY]) {
+    return;
+  }
+
+  const newHistory = changes[VIN_STORAGE_KEY].newValue || [];
+  renderCalendar(newHistory);
+
+  if (!dayPanel.classList.contains("hidden") && selectedDateKey) {
+    openDayPanel(selectedDateKey);
   }
 });
 

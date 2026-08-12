@@ -34,6 +34,15 @@ async function vinSetHistory(history) {
   await chrome.storage.local.set({ [VIN_STORAGE_KEY]: history });
 }
 
+// Remove uma unica entrada do historico pelo timestamp (identificador
+// unico de cada registro).
+async function vinDeleteEntry(timestamp) {
+  const history = await vinGetHistory();
+  const updated = history.filter((entry) => entry.timestamp !== timestamp);
+  await vinSetHistory(updated);
+  return updated;
+}
+
 // Chave no formato AAAA-MM-DD no fuso horario local, usada para agrupar por dia.
 function vinDateKey(timestamp) {
   const date = new Date(timestamp);

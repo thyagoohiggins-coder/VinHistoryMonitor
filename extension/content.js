@@ -4,13 +4,13 @@
 // padrao).
 
 const VIN_LABEL_REGEX = /\bVIN\b/i;
-const SAVE_DEBOUNCE_MS = 1200;
 const LABEL_SEARCH_MAX_DEPTH = 10;
 const LABEL_TEXT_MAX_LENGTH = 400;
 
-let debounceTimer = null;
 let lastSavedValue = "";
 
+// So grava quando o campo e "finalizado" (perde o foco, Enter, troca de
+// aba, fechamento da pagina) - nunca enquanto o usuario ainda esta digitando.
 async function saveVin(rawValue) {
   const vin = vinNormalize(rawValue);
   if (!vin || vin === lastSavedValue) {
@@ -31,11 +31,6 @@ async function saveVin(rawValue) {
 
   await vinSetHistory(updated);
   lastSavedValue = vin;
-}
-
-function scheduleSave(value) {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => saveVin(value), SAVE_DEBOUNCE_MS);
 }
 
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
@@ -120,13 +115,8 @@ function attachListener(input) {
 
   input.dataset.vinMonitorAttached = "true";
 
-  const handleInput = () => scheduleSave(getFieldValue(input));
-  const handleCommit = () => {
-    clearTimeout(debounceTimer);
-    saveVin(getFieldValue(input));
-  };
+  const handleCommit = () => saveVin(getFieldValue(input));
 
-  input.addEventListener("input", handleInput);
   input.addEventListener("blur", handleCommit);
   input.addEventListener("change", handleCommit);
   input.addEventListener("keydown", (event) => {

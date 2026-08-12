@@ -6,8 +6,6 @@ const countLabelEl = document.getElementById("countLabel");
 const clearBtn = document.getElementById("clearBtn");
 const dedupeToggle = document.getElementById("dedupeToggle");
 const openCalendarBtn = document.getElementById("openCalendarBtn");
-const dayPicker = document.getElementById("dayPicker");
-const deleteDayBtn = document.getElementById("deleteDayBtn");
 
 function formatTimestamp(timestamp) {
   const date = new Date(timestamp);
@@ -61,6 +59,17 @@ function render(history) {
       vinRow.appendChild(tag);
     }
 
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-entry-btn";
+    deleteBtn.title = "Apagar este VIN";
+    deleteBtn.setAttribute("aria-label", "Apagar este VIN");
+    deleteBtn.textContent = "\u{1F5D1}️";
+    deleteBtn.addEventListener("click", async () => {
+      const remaining = await vinDeleteEntry(entry.timestamp);
+      render(remaining);
+    });
+    vinRow.appendChild(deleteBtn);
+
     const timeEl = document.createElement("div");
     timeEl.className = "time";
     timeEl.textContent = formatTimestamp(entry.timestamp);
@@ -91,25 +100,6 @@ dedupeToggle.addEventListener("change", async () => {
 
 openCalendarBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: chrome.runtime.getURL("history.html") });
-});
-
-deleteDayBtn.addEventListener("click", async () => {
-  const selectedDate = dayPicker.value;
-  if (!selectedDate) {
-    alert("Escolha um dia para apagar.");
-    return;
-  }
-
-  const history = await vinGetHistory();
-  const remaining = history.filter((entry) => vinDateKey(entry.timestamp) !== selectedDate);
-
-  if (remaining.length === history.length) {
-    alert("Nenhum VIN encontrado nesse dia.");
-    return;
-  }
-
-  await vinSetHistory(remaining);
-  render(remaining);
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {

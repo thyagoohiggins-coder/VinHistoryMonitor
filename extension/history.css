@@ -238,6 +238,23 @@ h1 {
   gap: 6px;
 }
 
+.delete-entry-btn {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.delete-entry-btn:hover {
+  opacity: 1;
+  background: #fdeceb;
+}
+
 .day-panel-item .vin {
   font-weight: 600;
   font-size: 13px;
