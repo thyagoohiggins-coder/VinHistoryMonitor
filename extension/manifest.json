@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "VIN History Monitor - Google Forms",
+  "version": "1.0.0",
+  "description": "Monitora o campo VIN de um formulario do Google Forms, registra cada valor inserido com a hora e remove VINs duplicados automaticamente.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://docs.google.com/forms/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://docs.google.com/forms/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Historico de VIN"
+  }
+}
