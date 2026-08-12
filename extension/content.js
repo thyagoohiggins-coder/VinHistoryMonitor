@@ -1,9 +1,12 @@
-// Monitora o campo "VIN" de um formulario do Google Forms e grava um
-// historico com timestamp. A remocao automatica de duplicatas e opcional
-// (configuravel no popup da extensao, desativada por padrao).
+// Monitora o campo "VIN" de um formulario (Google Forms, Microsoft Forms
+// etc.) e grava um historico com timestamp. A remocao automatica de
+// duplicatas e opcional (configuravel no popup da extensao, desativada por
+// padrao).
 
 const VIN_LABEL_REGEX = /\bVIN\b/i;
 const SAVE_DEBOUNCE_MS = 1200;
+const LABEL_SEARCH_MAX_DEPTH = 10;
+const LABEL_TEXT_MAX_LENGTH = 400;
 
 let debounceTimer = null;
 let lastSavedValue = "";
@@ -35,19 +38,79 @@ function scheduleSave(value) {
   debounceTimer = setTimeout(() => saveVin(value), SAVE_DEBOUNCE_MS);
 }
 
+// Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
+// aria-label e, por fim, subindo pelos ancestrais ate achar um texto curto
+// que contenha "VIN" (a pergunta do formulario).
+function getFieldLabelText(input) {
+  const labelledBy = input.getAttribute("aria-labelledby");
+  if (labelledBy) {
+    const text = labelledBy
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent || "")
+      .join(" ")
+      .trim();
+    if (text) {
+      return text;
+    }
+  }
+
+  const ariaLabel = input.getAttribute("aria-label");
+  if (ariaLabel) {
+    return ariaLabel;
+  }
+
+  if (input.id) {
+    const explicitLabel = document.querySelector(`label[for="${CSS.escape(input.id)}"]`);
+    if (explicitLabel?.textContent) {
+      return explicitLabel.textContent;
+    }
+  }
+
+  let node = input.parentElement;
+  let depth = 0;
+
+  while (node && depth < LABEL_SEARCH_MAX_DEPTH) {
+    const text = (node.textContent || "").trim();
+
+    if (text && text.length <= LABEL_TEXT_MAX_LENGTH && VIN_LABEL_REGEX.test(text)) {
+      return text;
+    }
+
+    node = node.parentElement;
+    depth += 1;
+  }
+
+  return "";
+}
+
+function isVinCandidateInput(input) {
+  if (input.type && !["text", "search", "tel", "url"].includes(input.type)) {
+    return false;
+  }
+  return true;
+}
+
 function findVinInput() {
-  const listItems = document.querySelectorAll('div[role="listitem"]');
+  const candidates = document.querySelectorAll('input, textarea, [contenteditable="true"]');
 
-  for (const item of listItems) {
-    const headingEl = item.querySelector('div[role="heading"]') || item;
-    const headingText = headingEl.textContent || "";
+  for (const candidate of candidates) {
+    if (candidate.tagName === "INPUT" && !isVinCandidateInput(candidate)) {
+      continue;
+    }
 
-    if (VIN_LABEL_REGEX.test(headingText)) {
-      return item.querySelector('input[type="text"], input:not([type]), textarea');
+    if (VIN_LABEL_REGEX.test(getFieldLabelText(candidate))) {
+      return candidate;
     }
   }
 
   return null;
+}
+
+function getFieldValue(input) {
+  if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+    return input.value;
+  }
+  return input.textContent || "";
 }
 
 function attachListener(input) {
@@ -57,10 +120,10 @@ function attachListener(input) {
 
   input.dataset.vinMonitorAttached = "true";
 
-  const handleInput = () => scheduleSave(input.value);
+  const handleInput = () => scheduleSave(getFieldValue(input));
   const handleCommit = () => {
     clearTimeout(debounceTimer);
-    saveVin(input.value);
+    saveVin(getFieldValue(input));
   };
 
   input.addEventListener("input", handleInput);

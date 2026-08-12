@@ -1,13 +1,15 @@
 # VIN History Monitor
 
 Extensao de navegador (Chrome/Edge, Manifest V3) que monitora o campo **VIN**
-de um formulario do Google Forms. Toda vez que um valor e inserido nesse
-campo, ele e salvo em um historico local com a hora exata do registro.
+de um formulario (Google Forms ou Microsoft Forms). Toda vez que um valor e
+inserido nesse campo, ele e salvo em um historico local com a hora exata do
+registro.
 
 ## Funcionalidades
 
-- Detecta automaticamente a pergunta cujo titulo contem "VIN" em qualquer
-  formulario aberto em `docs.google.com/forms/*`.
+- Detecta automaticamente o campo cujo rotulo contem "VIN" em formularios
+  abertos em `docs.google.com/forms/*`, `forms.office.com/*`,
+  `forms.microsoft.com/*` ou `forms.cloud.microsoft/*`.
 - Salva o valor digitado ao sair do campo, pressionar Enter, trocar de aba ou
   fechar a pagina.
 - **Remocao automatica de duplicatas (opcional, desativada por padrao):** no
