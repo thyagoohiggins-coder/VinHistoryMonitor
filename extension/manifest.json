@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VIN History Monitor",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Monitora o campo VIN de formularios (Google Forms, Microsoft Forms), registra cada valor com a hora, destaca duplicatas (remocao automatica opcional) e mostra um calendario de historico por dia.",
   "permissions": ["storage"],
   "host_permissions": [
@@ -25,8 +25,20 @@
       "run_at": "document_idle"
     }
   ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Historico de VIN"
+    "default_title": "Historico de VIN",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   }
 }

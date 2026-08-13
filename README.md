@@ -57,8 +57,12 @@ registro.
 ## Estrutura
 
 ```
+tools/
+  make_icons.py   # Gera os PNGs de extension/icons (sem dependencias)
+
 extension/
   manifest.json   # Configuracao da extensao (Manifest V3)
+  icons/          # Icones 16/32/48/128 usados na barra e na loja
   storage.js      # Funcoes compartilhadas de acesso ao chrome.storage.local
   content.js      # Detecta o campo VIN e grava o historico
   background.js   # Mantem o badge do icone com a contagem de VINs

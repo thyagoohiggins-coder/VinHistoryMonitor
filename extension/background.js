@@ -7,7 +7,15 @@ async function updateBadge() {
   const count = history.length;
 
   await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
-  await chrome.action.setBadgeBackgroundColor({ color: "#0b8043" });
+
+  // Escuro, e nao verde: o icone ja e verde, entao um badge da mesma cor
+  // se dissolveria nele.
+  await chrome.action.setBadgeBackgroundColor({ color: "#1f2937" });
+
+  // setBadgeTextColor so existe em navegadores mais novos.
+  if (chrome.action.setBadgeTextColor) {
+    await chrome.action.setBadgeTextColor({ color: "#ffffff" });
+  }
 }
 
 chrome.runtime.onInstalled.addListener(updateBadge);
