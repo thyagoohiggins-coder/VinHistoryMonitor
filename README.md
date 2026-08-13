@@ -27,6 +27,16 @@ registro.
 - **Comparacao tolerante:** o mesmo VIN escrito com espacos, hifens ou em
   minusculas (`95PEFL31 DVB101832`, `95pefl31dvb101832`) conta como um unico
   VIN, tanto para remover quanto para destacar duplicatas.
+- **Turnos configuraveis:** 1º, 2º e 3º turnos, cada um com horario de inicio
+  e fim editaveis no popup (padrao 06:00-14:00, 14:00-22:00 e 22:00-06:00).
+  O 3º turno atravessa a meia-noite corretamente: um VIN registrado as 23h e
+  outro as 02h caem no mesmo turno.
+- **Separacao e contagem por turno:** os VINs sao classificados pelo horario
+  em que foram registrados. O popup e o calendario mostram o total de VINs de
+  cada turno, e o painel de um dia no calendario lista os VINs agrupados por
+  turno, com a quantidade de cada um. Registros em horarios nao cobertos por
+  nenhum turno aparecem em "Fora de turno", e o popup avisa quando os
+  horarios configurados deixam buracos ou se sobrepoem.
 - **Destaque de duplicatas:** VINs que aparecem mais de uma vez no historico
   sao destacados (borda/fundo amarelo e etiqueta "duplicado") tanto na lista
   do popup quanto no painel de um dia especifico no calendario.
@@ -73,4 +83,5 @@ extension/
 O historico e armazenado localmente via `chrome.storage.local`:
 
 - `vinHistory`: lista de objetos `{ vin, timestamp }`.
-- `vinSettings`: `{ dedupeEnabled: boolean }` (padrao `false`).
+- `vinSettings`: `{ dedupeEnabled: boolean, shifts: [{ id, label, start, end }] }`
+  (`dedupeEnabled` padrao `false`; `shifts` com os tres turnos padrao).

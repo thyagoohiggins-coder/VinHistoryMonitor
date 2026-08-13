@@ -17,8 +17,39 @@ const dayPanelTitle = document.getElementById("dayPanelTitle");
 const dayPanelList = document.getElementById("dayPanelList");
 const closeDayPanelBtn = document.getElementById("closeDayPanel");
 
+const shiftCountsEl = document.getElementById("shiftCounts");
+
 let currentHistory = [];
+let currentShifts = VIN_DEFAULT_SHIFTS;
 let selectedDateKey = null;
+
+function renderShiftCounts(history, shifts) {
+  shiftCountsEl.innerHTML = "";
+
+  for (const grupo of vinGroupByShift(history, shifts)) {
+    const li = document.createElement("li");
+    li.className = "shift-count-item" + (grupo.shift ? "" : " no-shift");
+
+    const nome = document.createElement("span");
+    nome.className = "shift-count-name";
+    nome.textContent = grupo.shift ? grupo.shift.label : "Fora de turno";
+
+    if (grupo.shift) {
+      const faixa = document.createElement("span");
+      faixa.className = "shift-count-range";
+      faixa.textContent = `${grupo.shift.start}–${grupo.shift.end}`;
+      nome.appendChild(faixa);
+    }
+
+    const valor = document.createElement("span");
+    valor.className = "shift-count-value";
+    valor.textContent = String(grupo.entries.length);
+
+    li.appendChild(nome);
+    li.appendChild(valor);
+    shiftCountsEl.appendChild(li);
+  }
+}
 
 function formatTime(timestamp) {
   return new Date(timestamp).toLocaleTimeString("pt-BR", {
@@ -129,6 +160,8 @@ function renderCalendar(history) {
     redundant > 0 ? `${redundant} duplicado${redundant === 1 ? "" : "s"}` : "";
   dedupeNowBtn.disabled = redundant === 0;
 
+  renderShiftCounts(history, currentShifts);
+
   const yearsToRender = [
     ...new Set([
       ...YEARS_ALWAYS_SHOWN,
@@ -169,48 +202,78 @@ function openDayPanel(dateKey) {
     empty.textContent = "Nenhum VIN registrado nesse dia.";
     dayPanelList.appendChild(empty);
   } else {
-    for (const entry of entries) {
-      const isDuplicate = duplicates.has(vinCompareKey(entry.vin));
-
-      const li = document.createElement("li");
-      li.className = "day-panel-item" + (isDuplicate ? " duplicate-entry" : "");
-
-      const vinRow = document.createElement("div");
-      vinRow.className = "vin-row";
-
-      const vinEl = document.createElement("span");
-      vinEl.className = "vin";
-      vinEl.textContent = entry.vin;
-      vinRow.appendChild(vinEl);
-
-      if (isDuplicate) {
-        const tag = document.createElement("span");
-        tag.className = "duplicate-tag";
-        tag.textContent = "duplicado";
-        vinRow.appendChild(tag);
+    // Os VINs do dia sao separados por turno; turnos sem registro naquele dia
+    // nao viram secao vazia.
+    for (const grupo of vinGroupByShift(entries, currentShifts)) {
+      if (grupo.entries.length === 0) {
+        continue;
       }
 
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-entry-btn";
-      deleteBtn.title = "Apagar este VIN";
-      deleteBtn.setAttribute("aria-label", "Apagar este VIN");
-      deleteBtn.textContent = "\u{1F5D1}️";
-      deleteBtn.addEventListener("click", async () => {
-        await vinDeleteEntry(entry.timestamp);
-      });
-      vinRow.appendChild(deleteBtn);
+      const cabecalho = document.createElement("li");
+      cabecalho.className = "day-shift-group";
 
-      const timeEl = document.createElement("div");
-      timeEl.className = "time";
-      timeEl.textContent = formatTime(entry.timestamp);
+      const titulo = document.createElement("div");
+      titulo.className = "day-shift-heading";
 
-      li.appendChild(vinRow);
-      li.appendChild(timeEl);
-      dayPanelList.appendChild(li);
+      const nome = document.createElement("span");
+      nome.textContent = grupo.shift ? grupo.shift.label : "Fora de turno";
+
+      const qtd = document.createElement("span");
+      qtd.className = "qtd";
+      qtd.textContent = `${grupo.entries.length} VIN${grupo.entries.length === 1 ? "" : "s"}`;
+
+      titulo.appendChild(nome);
+      titulo.appendChild(qtd);
+      cabecalho.appendChild(titulo);
+      dayPanelList.appendChild(cabecalho);
+
+      renderDayEntries(grupo.entries, duplicates);
     }
   }
 
   dayPanel.classList.remove("hidden");
+}
+
+function renderDayEntries(entries, duplicates) {
+  for (const entry of entries) {
+    const isDuplicate = duplicates.has(vinCompareKey(entry.vin));
+
+    const li = document.createElement("li");
+    li.className = "day-panel-item" + (isDuplicate ? " duplicate-entry" : "");
+
+    const vinRow = document.createElement("div");
+    vinRow.className = "vin-row";
+
+    const vinEl = document.createElement("span");
+    vinEl.className = "vin";
+    vinEl.textContent = entry.vin;
+    vinRow.appendChild(vinEl);
+
+    if (isDuplicate) {
+      const tag = document.createElement("span");
+      tag.className = "duplicate-tag";
+      tag.textContent = "duplicado";
+      vinRow.appendChild(tag);
+    }
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-entry-btn";
+    deleteBtn.title = "Apagar este VIN";
+    deleteBtn.setAttribute("aria-label", "Apagar este VIN");
+    deleteBtn.textContent = "\u{1F5D1}️";
+    deleteBtn.addEventListener("click", async () => {
+      await vinDeleteEntry(entry.timestamp);
+    });
+    vinRow.appendChild(deleteBtn);
+
+    const timeEl = document.createElement("div");
+    timeEl.className = "time";
+    timeEl.textContent = formatTime(entry.timestamp);
+
+    li.appendChild(vinRow);
+    li.appendChild(timeEl);
+    dayPanelList.appendChild(li);
+  }
 }
 
 function closeDayPanel() {
@@ -246,16 +309,36 @@ clearAllBtn.addEventListener("click", async () => {
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== "local" || !changes[VIN_STORAGE_KEY]) {
+  if (area !== "local") {
     return;
   }
 
-  const newHistory = changes[VIN_STORAGE_KEY].newValue || [];
-  renderCalendar(newHistory);
+  // Mudar os horarios dos turnos no popup precisa redesenhar esta pagina, que
+  // pode estar aberta em outra aba.
+  if (changes[VIN_SETTINGS_KEY]) {
+    const settings = {
+      ...VIN_DEFAULT_SETTINGS,
+      ...(changes[VIN_SETTINGS_KEY].newValue || {}),
+    };
+    if (Array.isArray(settings.shifts) && settings.shifts.length > 0) {
+      currentShifts = settings.shifts;
+      renderShiftCounts(currentHistory, currentShifts);
+    }
+  }
+
+  if (changes[VIN_STORAGE_KEY]) {
+    renderCalendar(changes[VIN_STORAGE_KEY].newValue || []);
+  }
 
   if (!dayPanel.classList.contains("hidden") && selectedDateKey) {
     openDayPanel(selectedDateKey);
   }
 });
 
-vinGetHistory().then(renderCalendar);
+async function iniciar() {
+  const [history, settings] = await Promise.all([vinGetHistory(), vinGetSettings()]);
+  currentShifts = settings.shifts;
+  renderCalendar(history);
+}
+
+iniciar();

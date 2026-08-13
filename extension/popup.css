@@ -21,6 +21,143 @@ h1 {
   margin: 0;
 }
 
+.brand-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0b8043, #0a6b39);
+  color: #fff;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #444;
+}
+
+.shifts {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: #fafafa;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+}
+
+.shift-counts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shift-count-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #ececec;
+  margin-bottom: 4px;
+}
+
+.shift-count-item.no-shift {
+  border-style: dashed;
+  border-color: #d8b45a;
+  background: #fffdf5;
+}
+
+.shift-count-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shift-count-range {
+  font-size: 10px;
+  color: #888;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.shift-count-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0b8043;
+}
+
+.link-toggle {
+  border: none;
+  background: none;
+  color: #0b5cab;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 0 0;
+}
+
+.link-toggle:hover {
+  text-decoration: underline;
+}
+
+.shift-config.hidden {
+  display: none;
+}
+
+.shift-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.shift-row label {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Largura suficiente tambem quando o navegador esta em locale de 12h e
+   acrescenta AM/PM ao campo. */
+.shift-row input[type="time"] {
+  width: 92px;
+  padding: 3px 4px;
+  border: 1px solid #d0d0d0;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.shift-row .dash {
+  font-size: 10px;
+  color: #999;
+  flex: none;
+}
+
+.shift-warning {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #9a6b00;
+  line-height: 1.4;
+}
+
+.shift-warning:empty {
+  display: none;
+}
+
 .stats {
   display: flex;
   align-items: baseline;

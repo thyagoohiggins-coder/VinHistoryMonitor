@@ -8,6 +8,16 @@ const dedupeToggle = document.getElementById("dedupeToggle");
 const dedupeNowBtn = document.getElementById("dedupeNowBtn");
 const dupeStatusEl = document.getElementById("dupeStatus");
 const openCalendarBtn = document.getElementById("openCalendarBtn");
+const shiftCountsEl = document.getElementById("shiftCounts");
+const shiftRowsEl = document.getElementById("shiftRows");
+const shiftConfigEl = document.getElementById("shiftConfig");
+const shiftWarningEl = document.getElementById("shiftWarning");
+const toggleShiftCfgBtn = document.getElementById("toggleShiftCfgBtn");
+const resetShiftsBtn = document.getElementById("resetShiftsBtn");
+
+// Ultimo estado conhecido, para redesenhar sem reler o storage a cada evento.
+let currentShifts = VIN_DEFAULT_SHIFTS;
+let currentHistory = [];
 
 function formatTimestamp(timestamp) {
   const date = new Date(timestamp);
@@ -21,10 +31,128 @@ function formatTimestamp(timestamp) {
   });
 }
 
+function renderShiftCounts(history, shifts) {
+  shiftCountsEl.innerHTML = "";
+
+  for (const grupo of vinGroupByShift(history, shifts)) {
+    const li = document.createElement("li");
+    li.className = "shift-count-item" + (grupo.shift ? "" : " no-shift");
+
+    const nome = document.createElement("span");
+    nome.className = "shift-count-name";
+    nome.textContent = grupo.shift ? grupo.shift.label : "Fora de turno";
+
+    if (grupo.shift) {
+      const faixa = document.createElement("span");
+      faixa.className = "shift-count-range";
+      faixa.textContent = `${grupo.shift.start}–${grupo.shift.end}`;
+      nome.appendChild(faixa);
+    }
+
+    const valor = document.createElement("span");
+    valor.className = "shift-count-value";
+    valor.textContent = String(grupo.entries.length);
+
+    li.appendChild(nome);
+    li.appendChild(valor);
+    shiftCountsEl.appendChild(li);
+  }
+}
+
+// Avisa quando os horarios configurados deixam parte do dia descoberta ou
+// fazem dois turnos disputarem o mesmo horario.
+function renderShiftWarning(shifts) {
+  let semCobertura = 0;
+  let sobreposto = 0;
+
+  for (let minuto = 0; minuto < 24 * 60; minuto += 1) {
+    const quantos = shifts.filter((shift) => vinShiftCovers(shift, minuto)).length;
+    if (quantos === 0) {
+      semCobertura += 1;
+    } else if (quantos > 1) {
+      sobreposto += 1;
+    }
+  }
+
+  const avisos = [];
+  if (semCobertura > 0) {
+    avisos.push(
+      `${Math.round(semCobertura / 60 * 10) / 10}h do dia nao pertencem a nenhum turno; ` +
+        "os VINs desse horario aparecem em “Fora de turno”."
+    );
+  }
+  if (sobreposto > 0) {
+    avisos.push(
+      `${Math.round(sobreposto / 60 * 10) / 10}h estao em mais de um turno; ` +
+        "nesse caso vale o turno que vier primeiro na lista."
+    );
+  }
+
+  shiftWarningEl.textContent = avisos.join(" ");
+}
+
+function renderShiftConfig(shifts) {
+  shiftRowsEl.innerHTML = "";
+
+  shifts.forEach((shift, indice) => {
+    const linha = document.createElement("div");
+    linha.className = "shift-row";
+
+    const rotulo = document.createElement("label");
+    rotulo.textContent = shift.label;
+    rotulo.htmlFor = `shift-start-${shift.id}`;
+
+    const inicio = document.createElement("input");
+    inicio.type = "time";
+    inicio.id = `shift-start-${shift.id}`;
+    inicio.value = shift.start;
+
+    const traco = document.createElement("span");
+    traco.className = "dash";
+    traco.textContent = "ate";
+
+    const fim = document.createElement("input");
+    fim.type = "time";
+    fim.id = `shift-end-${shift.id}`;
+    fim.value = shift.end;
+
+    const aoMudar = async () => {
+      // Campo de hora vazio manteria o turno sem cobertura; ignora ate que o
+      // usuario informe um horario valido.
+      if (!vinParseTime(inicio.value) || !vinParseTime(fim.value)) {
+        return;
+      }
+
+      const atualizados = currentShifts.map((item, i) =>
+        i === indice ? { ...item, start: inicio.value, end: fim.value } : item
+      );
+
+      currentShifts = atualizados;
+      await vinSetSettings({ shifts: atualizados });
+      renderShiftCounts(currentHistory, atualizados);
+      renderShiftWarning(atualizados);
+    };
+
+    inicio.addEventListener("change", aoMudar);
+    fim.addEventListener("change", aoMudar);
+
+    linha.appendChild(rotulo);
+    linha.appendChild(inicio);
+    linha.appendChild(traco);
+    linha.appendChild(fim);
+    shiftRowsEl.appendChild(linha);
+  });
+
+  renderShiftWarning(shifts);
+}
+
 function render(history) {
   listEl.innerHTML = "";
 
   history = history || [];
+  currentHistory = history;
+
+  renderShiftCounts(history, currentShifts);
 
   const isEmpty = history.length === 0;
   const count = history.length;
@@ -94,8 +222,24 @@ function render(history) {
 async function load() {
   const [history, settings] = await Promise.all([vinGetHistory(), vinGetSettings()]);
   dedupeToggle.checked = settings.dedupeEnabled;
+  currentShifts = settings.shifts;
+  renderShiftConfig(currentShifts);
   render(history);
 }
+
+toggleShiftCfgBtn.addEventListener("click", () => {
+  const escondido = shiftConfigEl.classList.toggle("hidden");
+  toggleShiftCfgBtn.textContent = escondido
+    ? "Definir horarios dos turnos"
+    : "Ocultar horarios dos turnos";
+});
+
+resetShiftsBtn.addEventListener("click", async () => {
+  currentShifts = VIN_DEFAULT_SHIFTS;
+  await vinSetSettings({ shifts: VIN_DEFAULT_SHIFTS });
+  renderShiftConfig(currentShifts);
+  renderShiftCounts(currentHistory, currentShifts);
+});
 
 clearBtn.addEventListener("click", async () => {
   if (!confirm("Apagar todo o historico de VINs? Essa acao nao pode ser desfeita.")) {
@@ -145,7 +289,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
     render(changes[VIN_STORAGE_KEY].newValue || []);
   }
   if (changes[VIN_SETTINGS_KEY]) {
-    dedupeToggle.checked = (changes[VIN_SETTINGS_KEY].newValue || VIN_DEFAULT_SETTINGS).dedupeEnabled;
+    const settings = { ...VIN_DEFAULT_SETTINGS, ...(changes[VIN_SETTINGS_KEY].newValue || {}) };
+    dedupeToggle.checked = settings.dedupeEnabled;
+
+    if (Array.isArray(settings.shifts) && settings.shifts.length > 0) {
+      currentShifts = settings.shifts;
+      renderShiftCounts(currentHistory, currentShifts);
+      renderShiftWarning(currentShifts);
+    }
   }
 });
 

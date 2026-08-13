@@ -7,6 +7,10 @@
   </head>
   <body>
     <header class="page-header">
+      <div class="brand-card">
+        <span class="brand-title">Reparo FA</span>
+        <span class="brand-sub">Controle de VINs</span>
+      </div>
       <h1>Calendario de VINs</h1>
       <div class="header-actions">
         <span id="totalCount" class="total-count"></span>
@@ -20,6 +24,14 @@
       <span class="legend-item"><span class="dot has-data"></span> dia com VIN registrado</span>
       <span class="legend-item"><span class="dot has-duplicate"></span> dia com VIN duplicado</span>
     </p>
+
+    <section class="shift-summary">
+      <h2 class="section-title">VINs por turno</h2>
+      <ul id="shiftCounts" class="shift-counts"></ul>
+      <p class="shift-hint">
+        Os horarios de cada turno sao definidos no popup da extensao.
+      </p>
+    </section>
 
     <div id="calendarContainer" class="calendar-container"></div>
 

@@ -84,6 +84,111 @@ h1 {
   padding: 0;
 }
 
+.brand-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0b8043, #0a6b39);
+  color: #fff;
+  margin-right: 4px;
+}
+
+.brand-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: #444;
+}
+
+.shift-summary {
+  margin: 4px 0 20px;
+}
+
+.shift-counts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.shift-count-item {
+  min-width: 150px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 10px;
+}
+
+.shift-count-item.no-shift {
+  border-style: dashed;
+  border-color: #d8b45a;
+  background: #fffdf5;
+}
+
+.shift-count-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.shift-count-range {
+  font-size: 10px;
+  color: #888;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.shift-count-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0b8043;
+  margin-top: 2px;
+}
+
+.shift-hint {
+  font-size: 11px;
+  color: #888;
+  margin: 8px 0 0;
+}
+
+.day-shift-group {
+  margin-bottom: 12px;
+}
+
+.day-shift-heading {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #ececec;
+  display: flex;
+  justify-content: space-between;
+}
+
+.day-shift-heading .qtd {
+  color: #0b8043;
+}
+
 .legend {
   display: flex;
   gap: 18px;

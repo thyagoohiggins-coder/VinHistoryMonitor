@@ -6,14 +6,32 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>
-      <h1>Historico de VIN</h1>
-    </header>
+    <div class="brand-card">
+      <span class="brand-title">Reparo FA</span>
+      <span class="brand-sub">Controle de VINs</span>
+    </div>
 
     <div id="stats" class="stats">
       <span id="countNumber" class="count-number">0</span>
       <span id="countLabel" class="count-label">VINs registrados</span>
     </div>
+
+    <section class="shifts">
+      <h2 class="section-title">VINs por turno</h2>
+      <ul id="shiftCounts" class="shift-counts"></ul>
+
+      <button id="toggleShiftCfgBtn" class="link-toggle" type="button">
+        Definir horarios dos turnos
+      </button>
+
+      <div id="shiftConfig" class="shift-config hidden">
+        <div id="shiftRows"></div>
+        <p id="shiftWarning" class="shift-warning"></p>
+        <button id="resetShiftsBtn" class="link-toggle" type="button">
+          Restaurar horarios padrao
+        </button>
+      </div>
+    </section>
 
     <section class="settings">
       <label class="switch-row">

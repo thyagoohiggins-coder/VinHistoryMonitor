@@ -3,10 +3,17 @@
 
 const VIN_STORAGE_KEY = "vinHistory";
 const VIN_SETTINGS_KEY = "vinSettings";
+const VIN_DEFAULT_SHIFTS = [
+  { id: "t1", label: "1º turno", start: "06:00", end: "14:00" },
+  { id: "t2", label: "2º turno", start: "14:00", end: "22:00" },
+  { id: "t3", label: "3º turno", start: "22:00", end: "06:00" },
+];
+
 const VIN_DEFAULT_SETTINGS = {
   // Desativado por padrao: por padrao TODAS as entradas ficam no historico,
   // inclusive VINs repetidos (que sao destacados na interface).
   dedupeEnabled: false,
+  shifts: VIN_DEFAULT_SHIFTS,
 };
 
 function vinNormalize(value) {
@@ -22,7 +29,15 @@ function vinCompareKey(vin) {
 
 async function vinGetSettings() {
   const { [VIN_SETTINGS_KEY]: settings } = await chrome.storage.local.get(VIN_SETTINGS_KEY);
-  return { ...VIN_DEFAULT_SETTINGS, ...(settings || {}) };
+  const merged = { ...VIN_DEFAULT_SETTINGS, ...(settings || {}) };
+
+  // Um valor gravado por uma versao antiga (ou corrompido) nao pode deixar a
+  // extensao sem turnos.
+  if (!Array.isArray(merged.shifts) || merged.shifts.length === 0) {
+    merged.shifts = VIN_DEFAULT_SHIFTS;
+  }
+
+  return merged;
 }
 
 async function vinSetSettings(partial) {
@@ -148,6 +163,77 @@ function vinFindDuplicates(history) {
 function vinCountRedundant(history) {
   const distinct = new Set(history.map((entry) => vinCompareKey(entry.vin)));
   return history.length - distinct.size;
+}
+
+// ---------------------------------------------------------------------------
+// Turnos
+// ---------------------------------------------------------------------------
+
+// "HH:MM" -> minutos desde a meia-noite, ou null se invalido.
+function vinParseTime(text) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec((text || "").trim());
+  if (!match) {
+    return null;
+  }
+
+  const horas = Number(match[1]);
+  const minutos = Number(match[2]);
+  if (horas > 23 || minutos > 59) {
+    return null;
+  }
+
+  return horas * 60 + minutos;
+}
+
+function vinMinutesOfDay(timestamp) {
+  const date = new Date(timestamp);
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+// Um turno cobre um instante se o horario cair entre inicio e fim. Quando o
+// fim e menor que o inicio (3º turno, 22:00 -> 06:00) o intervalo atravessa a
+// meia-noite e o teste se inverte.
+function vinShiftCovers(shift, minutosDoDia) {
+  const inicio = vinParseTime(shift.start);
+  const fim = vinParseTime(shift.end);
+
+  // Horario invalido ou intervalo de duracao zero nao cobre nada - assim um
+  // turno mal preenchido nao engole os registros dos outros.
+  if (inicio === null || fim === null || inicio === fim) {
+    return false;
+  }
+
+  return inicio < fim
+    ? minutosDoDia >= inicio && minutosDoDia < fim
+    : minutosDoDia >= inicio || minutosDoDia < fim;
+}
+
+// Turno de um registro, ou null se nenhum turno cobrir aquele horario.
+// Se dois turnos se sobrepuserem, vale o primeiro da lista.
+function vinShiftForTimestamp(timestamp, shifts) {
+  const minutos = vinMinutesOfDay(timestamp);
+  return shifts.find((shift) => vinShiftCovers(shift, minutos)) || null;
+}
+
+// Separa o historico por turno. Retorna uma lista na ordem dos turnos
+// configurados, com um balde final para o que ficou fora de todos eles.
+function vinGroupByShift(history, shifts) {
+  const grupos = shifts.map((shift) => ({ shift, entries: [] }));
+  const porId = new Map(grupos.map((grupo) => [grupo.shift.id, grupo]));
+  const foraDeTurno = { shift: null, entries: [] };
+
+  for (const entry of history) {
+    const shift = vinShiftForTimestamp(entry.timestamp, shifts);
+    const destino = shift ? porId.get(shift.id) || foraDeTurno : foraDeTurno;
+    destino.entries.push(entry);
+  }
+
+  for (const grupo of grupos) {
+    grupo.entries.sort((a, b) => b.timestamp - a.timestamp);
+  }
+  foraDeTurno.entries.sort((a, b) => b.timestamp - a.timestamp);
+
+  return foraDeTurno.entries.length > 0 ? [...grupos, foraDeTurno] : grupos;
 }
 
 function vinGroupByDate(history) {
