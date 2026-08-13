@@ -7,14 +7,19 @@ const VIN_LABEL_REGEX = /\bVIN\b/i;
 const LABEL_SEARCH_MAX_DEPTH = 10;
 const LABEL_TEXT_MAX_LENGTH = 400;
 
-// Janela curta usada apenas para nao gravar o mesmo valor duas vezes quando
-// varios eventos de "fim de edicao" disparam praticamente juntos (blur +
-// change, por exemplo). Passado esse intervalo o mesmo VIN pode ser
-// registrado de novo - inclusive no dia seguinte, com a aba ainda aberta.
-const REPEAT_GUARD_MS = 3000;
+// Conteudo do campo que ja foi registrado. Enquanto o campo continuar com
+// esse mesmo valor, sair e voltar nele nao gera um novo registro - so clicar
+// na caixa e clicar fora nao conta como um VIN novo.
+let recordedValue = "";
 
-let lastSavedValue = "";
-let lastSavedAt = 0;
+// Quando o campo fica vazio (o formulario foi enviado e limpo, ou o usuario
+// apagou o conteudo), o proximo preenchimento e um registro novo - mesmo que
+// seja exatamente o mesmo VIN de antes.
+function trackFieldCleared(rawValue) {
+  if (!vinNormalize(rawValue)) {
+    recordedValue = "";
+  }
+}
 
 // So grava quando o campo e "finalizado" (perde o foco, Enter, troca de
 // aba, fechamento da pagina) - nunca enquanto o usuario ainda esta digitando.
@@ -24,12 +29,12 @@ async function saveVin(rawValue) {
     return;
   }
 
-  if (vin === lastSavedValue && Date.now() - lastSavedAt < REPEAT_GUARD_MS) {
+  // Nada mudou desde o ultimo registro deste campo.
+  if (vin === recordedValue) {
     return;
   }
 
-  lastSavedValue = vin;
-  lastSavedAt = Date.now();
+  recordedValue = vin;
 
   await vinAddEntry(vin);
 }
@@ -123,6 +128,10 @@ function commitCurrentInput() {
 function attachListener(input) {
   currentVinInput = input;
 
+  // O formulario recria o campo vazio depois de cada envio; isso libera o
+  // proximo registro mesmo que o VIN seja igual ao anterior.
+  trackFieldCleared(getFieldValue(input));
+
   if (input.dataset.vinMonitorAttached === "true") {
     return;
   }
@@ -130,6 +139,10 @@ function attachListener(input) {
   input.dataset.vinMonitorAttached = "true";
 
   const handleCommit = () => saveVin(getFieldValue(input));
+
+  // Este listener nunca grava nada: serve so para perceber que o campo foi
+  // esvaziado durante a digitacao.
+  input.addEventListener("input", () => trackFieldCleared(getFieldValue(input)));
 
   input.addEventListener("blur", handleCommit);
   input.addEventListener("change", handleCommit);
