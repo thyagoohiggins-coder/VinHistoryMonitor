@@ -5,6 +5,8 @@ const countNumberEl = document.getElementById("countNumber");
 const countLabelEl = document.getElementById("countLabel");
 const clearBtn = document.getElementById("clearBtn");
 const dedupeToggle = document.getElementById("dedupeToggle");
+const dedupeNowBtn = document.getElementById("dedupeNowBtn");
+const dupeStatusEl = document.getElementById("dupeStatus");
 const openCalendarBtn = document.getElementById("openCalendarBtn");
 
 function formatTimestamp(timestamp) {
@@ -22,9 +24,18 @@ function formatTimestamp(timestamp) {
 function render(history) {
   listEl.innerHTML = "";
 
-  const isEmpty = !history || history.length === 0;
-  const count = isEmpty ? 0 : history.length;
-  const duplicates = vinFindDuplicates(history || []);
+  history = history || [];
+
+  const isEmpty = history.length === 0;
+  const count = history.length;
+  const duplicates = vinFindDuplicates(history);
+
+  const redundant = vinCountRedundant(history);
+  dupeStatusEl.textContent =
+    redundant > 0
+      ? `${redundant} registro${redundant === 1 ? "" : "s"} duplicado${redundant === 1 ? "" : "s"} no historico.`
+      : "Nenhuma duplicata no historico.";
+  dedupeNowBtn.disabled = redundant === 0;
 
   emptyStateEl.style.display = isEmpty ? "block" : "none";
   listEl.style.display = isEmpty ? "none" : "block";
@@ -39,7 +50,7 @@ function render(history) {
   const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
 
   for (const entry of sorted) {
-    const isDuplicate = duplicates.has(entry.vin);
+    const isDuplicate = duplicates.has(vinCompareKey(entry.vin));
 
     const li = document.createElement("li");
     li.className = "history-item" + (isDuplicate ? " duplicate-entry" : "");
@@ -96,6 +107,16 @@ clearBtn.addEventListener("click", async () => {
 
 dedupeToggle.addEventListener("change", async () => {
   await vinSetSettings({ dedupeEnabled: dedupeToggle.checked });
+
+  // Ligar a opcao tem que valer tambem para o que ja esta gravado, senao as
+  // duplicatas antigas continuam na lista e a opcao parece nao fazer nada.
+  if (dedupeToggle.checked) {
+    render(await vinRemoveDuplicatesNow());
+  }
+});
+
+dedupeNowBtn.addEventListener("click", async () => {
+  render(await vinRemoveDuplicatesNow());
 });
 
 openCalendarBtn.addEventListener("click", () => {

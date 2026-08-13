@@ -22,9 +22,11 @@
       </label>
       <p class="hint">
         Desativado por padrao: todos os VINs ficam no historico, mesmo os
-        repetidos (destacados abaixo). Ative para manter apenas o registro
-        mais recente de cada VIN.
+        repetidos (destacados abaixo). Ao ativar, o historico ja existente
+        tambem e limpo, mantendo so o registro mais recente de cada VIN.
       </p>
+      <p id="dupeStatus" class="dupe-status"></p>
+      <button id="dedupeNowBtn" class="dedupe-now-btn">Remover duplicatas agora</button>
     </section>
 
     <section class="actions">

@@ -71,7 +71,9 @@ function buildMonth(year, monthIndex, dataByDate) {
       cell.classList.add("has-data");
 
       const duplicates = vinFindDuplicates(currentHistory);
-      const hasDuplicate = entries.some((entry) => duplicates.has(entry.vin));
+      const hasDuplicate = entries.some((entry) =>
+        duplicates.has(vinCompareKey(entry.vin))
+      );
       if (hasDuplicate) {
         cell.classList.add("has-duplicate");
       }
@@ -161,7 +163,7 @@ function openDayPanel(dateKey) {
     dayPanelList.appendChild(empty);
   } else {
     for (const entry of entries) {
-      const isDuplicate = duplicates.has(entry.vin);
+      const isDuplicate = duplicates.has(vinCompareKey(entry.vin));
 
       const li = document.createElement("li");
       li.className = "day-panel-item" + (isDuplicate ? " duplicate-entry" : "");

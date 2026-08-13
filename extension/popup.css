@@ -73,6 +73,34 @@ h1 {
   line-height: 1.4;
 }
 
+.dupe-status {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9a6b00;
+}
+
+.dedupe-now-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px;
+  border: 1px solid #f0b429;
+  background: #fff8e6;
+  color: #7a5400;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dedupe-now-btn:hover:not(:disabled) {
+  background: #ffefc6;
+}
+
+.dedupe-now-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .actions {
   margin-bottom: 10px;
 }

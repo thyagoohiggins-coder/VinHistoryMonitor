@@ -15,8 +15,15 @@ registro.
 - **Remocao automatica de duplicatas (opcional, desativada por padrao):** no
   popup ha um interruptor "Remover VINs duplicados automaticamente". Enquanto
   desativado, todos os VINs digitados ficam no historico, mesmo repetidos.
-  Quando ativado, ao inserir um VIN ja existente a entrada antiga e
-  substituida por uma nova com o horario atualizado.
+  Ao ativar, o historico ja gravado tambem e limpo na hora, mantendo apenas o
+  registro mais recente de cada VIN; dai em diante, inserir um VIN ja
+  existente substitui a entrada antiga.
+- **Botao "Remover duplicatas agora":** faz a limpeza uma unica vez, sem
+  precisar ligar a opcao permanente. O popup mostra quantos registros
+  duplicados existem no historico.
+- **Comparacao tolerante:** o mesmo VIN escrito com espacos, hifens ou em
+  minusculas (`95PEFL31 DVB101832`, `95pefl31dvb101832`) conta como um unico
+  VIN, tanto para remover quanto para destacar duplicatas.
 - **Destaque de duplicatas:** VINs que aparecem mais de uma vez no historico
   sao destacados (borda/fundo amarelo e etiqueta "duplicado") tanto na lista
   do popup quanto no painel de um dia especifico no calendario.

@@ -13,6 +13,13 @@ function vinNormalize(value) {
   return (value || "").trim().toUpperCase();
 }
 
+// Chave usada para decidir se dois registros sao o MESMO VIN. Ignora
+// espacos, hifens e qualquer pontuacao, de modo que "95PEFL31 DVB101832",
+// "95pefl31dvb101832" e "95PEFL31-DVB101832" contem como um so.
+function vinCompareKey(vin) {
+  return (vin || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 async function vinGetSettings() {
   const { [VIN_SETTINGS_KEY]: settings } = await chrome.storage.local.get(VIN_SETTINGS_KEY);
   return { ...VIN_DEFAULT_SETTINGS, ...(settings || {}) };
@@ -52,7 +59,7 @@ let vinWriteQueue = Promise.resolve();
 function vinMutateHistory(mutator) {
   const result = vinWriteQueue.then(async () => {
     const history = await vinGetHistory();
-    const updated = mutator(history);
+    const updated = await mutator(history);
     await vinSetHistory(updated);
     return updated;
   });
@@ -62,13 +69,41 @@ function vinMutateHistory(mutator) {
   return result;
 }
 
+// Mantem apenas o registro mais recente de cada VIN.
+function vinDedupeHistory(history) {
+  const seen = new Set();
+  const ordered = [...history].sort((a, b) => b.timestamp - a.timestamp);
+  const kept = [];
+
+  for (const entry of ordered) {
+    const key = vinCompareKey(entry.vin);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    kept.push(entry);
+  }
+
+  return kept;
+}
+
+// Aplica a limpeza de duplicatas ao historico ja gravado. Usado ao ligar a
+// opcao e pelo botao "Remover duplicatas agora".
+async function vinRemoveDuplicatesNow() {
+  return vinMutateHistory(vinDedupeHistory);
+}
+
 // Acrescenta um VIN ao historico respeitando a opcao de remover duplicatas.
 async function vinAddEntry(vin) {
-  const settings = await vinGetSettings();
+  const key = vinCompareKey(vin);
 
-  return vinMutateHistory((history) => {
+  // As configuracoes sao lidas dentro da fila para que uma mudanca na opcao
+  // feita no mesmo instante nao seja ignorada por esta gravacao.
+  return vinMutateHistory(async (history) => {
+    const settings = await vinGetSettings();
+
     const base = settings.dedupeEnabled
-      ? history.filter((entry) => entry.vin !== vin)
+      ? history.filter((entry) => vinCompareKey(entry.vin) !== key)
       : history.slice();
 
     // O timestamp identifica cada registro, entao nao pode se repetir.
@@ -91,20 +126,28 @@ function vinDateKey(timestamp) {
   return `${year}-${month}-${day}`;
 }
 
-// Retorna o conjunto de VINs que aparecem mais de uma vez no historico.
+// Conjunto de chaves de VIN que aparecem mais de uma vez no historico.
+// Compare sempre com vinCompareKey(entry.vin), nunca com entry.vin cru.
 function vinFindDuplicates(history) {
   const counts = new Map();
   for (const entry of history) {
-    counts.set(entry.vin, (counts.get(entry.vin) || 0) + 1);
+    const key = vinCompareKey(entry.vin);
+    counts.set(key, (counts.get(key) || 0) + 1);
   }
 
   const duplicates = new Set();
-  for (const [vin, count] of counts) {
+  for (const [key, count] of counts) {
     if (count > 1) {
-      duplicates.add(vin);
+      duplicates.add(key);
     }
   }
   return duplicates;
+}
+
+// Quantos registros seriam removidos por uma limpeza de duplicatas.
+function vinCountRedundant(history) {
+  const distinct = new Set(history.map((entry) => vinCompareKey(entry.vin)));
+  return history.length - distinct.size;
 }
 
 function vinGroupByDate(history) {
