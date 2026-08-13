@@ -37,10 +37,49 @@ async function vinSetHistory(history) {
 // Remove uma unica entrada do historico pelo timestamp (identificador
 // unico de cada registro).
 async function vinDeleteEntry(timestamp) {
-  const history = await vinGetHistory();
-  const updated = history.filter((entry) => entry.timestamp !== timestamp);
-  await vinSetHistory(updated);
-  return updated;
+  return vinMutateHistory((history) =>
+    history.filter((entry) => entry.timestamp !== timestamp)
+  );
+}
+
+// Fila de escrita: chrome.storage e assincrono, entao duas alteracoes
+// disparadas ao mesmo tempo (ex.: blur e change no mesmo instante) leriam
+// a mesma versao do historico e a segunda sobrescreveria a primeira,
+// perdendo registros. Encadeando as operacoes, cada uma le o resultado
+// ja gravado pela anterior.
+let vinWriteQueue = Promise.resolve();
+
+function vinMutateHistory(mutator) {
+  const result = vinWriteQueue.then(async () => {
+    const history = await vinGetHistory();
+    const updated = mutator(history);
+    await vinSetHistory(updated);
+    return updated;
+  });
+
+  // A fila nunca deve travar por causa de um erro em uma das operacoes.
+  vinWriteQueue = result.catch(() => {});
+  return result;
+}
+
+// Acrescenta um VIN ao historico respeitando a opcao de remover duplicatas.
+async function vinAddEntry(vin) {
+  const settings = await vinGetSettings();
+
+  return vinMutateHistory((history) => {
+    const base = settings.dedupeEnabled
+      ? history.filter((entry) => entry.vin !== vin)
+      : history.slice();
+
+    // O timestamp identifica cada registro, entao nao pode se repetir.
+    let timestamp = Date.now();
+    while (base.some((entry) => entry.timestamp === timestamp)) {
+      timestamp += 1;
+    }
+
+    base.unshift({ vin, timestamp });
+    return base;
+  });
 }
 
 // Chave no formato AAAA-MM-DD no fuso horario local, usada para agrupar por dia.

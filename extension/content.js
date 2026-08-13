@@ -7,30 +7,31 @@ const VIN_LABEL_REGEX = /\bVIN\b/i;
 const LABEL_SEARCH_MAX_DEPTH = 10;
 const LABEL_TEXT_MAX_LENGTH = 400;
 
+// Janela curta usada apenas para nao gravar o mesmo valor duas vezes quando
+// varios eventos de "fim de edicao" disparam praticamente juntos (blur +
+// change, por exemplo). Passado esse intervalo o mesmo VIN pode ser
+// registrado de novo - inclusive no dia seguinte, com a aba ainda aberta.
+const REPEAT_GUARD_MS = 3000;
+
 let lastSavedValue = "";
+let lastSavedAt = 0;
 
 // So grava quando o campo e "finalizado" (perde o foco, Enter, troca de
 // aba, fechamento da pagina) - nunca enquanto o usuario ainda esta digitando.
 async function saveVin(rawValue) {
   const vin = vinNormalize(rawValue);
-  if (!vin || vin === lastSavedValue) {
+  if (!vin) {
     return;
   }
 
-  const settings = await vinGetSettings();
-  const history = await vinGetHistory();
+  if (vin === lastSavedValue && Date.now() - lastSavedAt < REPEAT_GUARD_MS) {
+    return;
+  }
 
-  const updated = settings.dedupeEnabled
-    ? history.filter((entry) => entry.vin !== vin)
-    : history.slice();
-
-  updated.unshift({
-    vin,
-    timestamp: Date.now(),
-  });
-
-  await vinSetHistory(updated);
   lastSavedValue = vin;
+  lastSavedAt = Date.now();
+
+  await vinAddEntry(vin);
 }
 
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
@@ -108,8 +109,21 @@ function getFieldValue(input) {
   return input.textContent || "";
 }
 
+// Campo VIN atualmente na tela. O formulario se redesenha a cada envio, entao
+// esse ponteiro e atualizado, e nao acumulado - do contrario cada novo campo
+// somaria mais um listener global gravando valores antigos.
+let currentVinInput = null;
+
+function commitCurrentInput() {
+  if (currentVinInput && currentVinInput.isConnected) {
+    saveVin(getFieldValue(currentVinInput));
+  }
+}
+
 function attachListener(input) {
-  if (!input || input.dataset.vinMonitorAttached === "true") {
+  currentVinInput = input;
+
+  if (input.dataset.vinMonitorAttached === "true") {
     return;
   }
 
@@ -124,15 +138,16 @@ function attachListener(input) {
       handleCommit();
     }
   });
-
-  // Garante que o valor seja salvo antes da pagina ser fechada/navegada
-  window.addEventListener("beforeunload", handleCommit);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      handleCommit();
-    }
-  });
 }
+
+// Registrados uma unica vez, sempre atuando sobre o campo atual, para
+// garantir que o valor seja salvo antes da pagina ser fechada/navegada.
+window.addEventListener("pagehide", commitCurrentInput);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    commitCurrentInput();
+  }
+});
 
 function scan() {
   const input = findVinInput();

@@ -1,5 +1,8 @@
 const WEEKDAY_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
-const YEARS_ALWAYS_SHOWN = [2026];
+// 2026 e o ano corrente aparecem sempre (na virada do ano o calendario novo
+// precisa existir antes do primeiro registro, senao o dia atual fica
+// inacessivel). 2027 aparece assim que tiver historico.
+const YEARS_ALWAYS_SHOWN = [...new Set([2026, new Date().getFullYear()])].sort();
 const YEARS_HISTORY_ONLY = [2027];
 
 const calendarContainer = document.getElementById("calendarContainer");
@@ -118,9 +121,11 @@ function renderCalendar(history) {
   totalCountEl.textContent = `${history.length} VIN${history.length === 1 ? "" : "s"} no historico`;
 
   const yearsToRender = [
-    ...YEARS_ALWAYS_SHOWN,
-    ...YEARS_HISTORY_ONLY.filter((year) => yearsWithData.has(year)),
-  ];
+    ...new Set([
+      ...YEARS_ALWAYS_SHOWN,
+      ...YEARS_HISTORY_ONLY.filter((year) => yearsWithData.has(year)),
+    ]),
+  ].sort((a, b) => a - b);
 
   for (const year of yearsToRender) {
     calendarContainer.appendChild(buildYearSection(year, dataByDate));
@@ -131,7 +136,7 @@ function renderCalendar(history) {
   );
   emptyYearsMsg.textContent =
     otherYears.length > 0
-      ? `Tambem ha registros em: ${otherYears.sort().join(", ")} (fora do periodo exibido).`
+      ? `Tambem ha registros em: ${otherYears.sort((a, b) => a - b).join(", ")} (fora do periodo exibido).`
       : "";
 }
 
@@ -210,7 +215,7 @@ clearAllBtn.addEventListener("click", async () => {
   if (!confirm("Apagar todo o historico de VINs? Essa acao nao pode ser desfeita.")) {
     return;
   }
-  await vinSetHistory([]);
+  await vinMutateHistory(() => []);
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {

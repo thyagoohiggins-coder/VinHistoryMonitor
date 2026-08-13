@@ -90,7 +90,7 @@ clearBtn.addEventListener("click", async () => {
   if (!confirm("Apagar todo o historico de VINs? Essa acao nao pode ser desfeita.")) {
     return;
   }
-  await vinSetHistory([]);
+  await vinMutateHistory(() => []);
   render([]);
 });
 
