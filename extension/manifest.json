@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VIN History Monitor",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Monitora o campo VIN de formularios (Google Forms, Microsoft Forms), registra cada valor com a hora, destaca duplicatas (remocao automatica opcional) e mostra um calendario de historico por dia.",
   "permissions": ["storage"],
   "host_permissions": [

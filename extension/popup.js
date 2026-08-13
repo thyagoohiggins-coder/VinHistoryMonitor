@@ -116,6 +116,20 @@ dedupeToggle.addEventListener("change", async () => {
 });
 
 dedupeNowBtn.addEventListener("click", async () => {
+  const history = await vinGetHistory();
+  const redundant = vinCountRedundant(history);
+  if (redundant === 0) {
+    return;
+  }
+
+  const confirmed = confirm(
+    `Remover ${redundant} registro${redundant === 1 ? "" : "s"} duplicado${redundant === 1 ? "" : "s"}?\n\n` +
+      "De cada VIN repetido fica apenas o registro mais recente."
+  );
+  if (!confirmed) {
+    return;
+  }
+
   render(await vinRemoveDuplicatesNow());
 });
 

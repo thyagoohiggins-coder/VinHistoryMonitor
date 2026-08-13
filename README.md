@@ -18,9 +18,12 @@ registro.
   Ao ativar, o historico ja gravado tambem e limpo na hora, mantendo apenas o
   registro mais recente de cada VIN; dai em diante, inserir um VIN ja
   existente substitui a entrada antiga.
-- **Botao "Remover duplicatas agora":** faz a limpeza uma unica vez, sem
-  precisar ligar a opcao permanente. O popup mostra quantos registros
-  duplicados existem no historico.
+- **Remover duplicatas ja registradas:** botao "Remover duplicatas agora" no
+  popup e "Remover duplicatas" no calendario, que limpam de uma vez os VINs
+  repetidos que ja estao gravados, mantendo apenas o registro mais recente de
+  cada um. Ambas as telas mostram quantos registros duplicados existem e
+  pedem confirmacao antes de apagar; o botao fica desabilitado quando nao ha
+  nada a remover.
 - **Comparacao tolerante:** o mesmo VIN escrito com espacos, hifens ou em
   minusculas (`95PEFL31 DVB101832`, `95pefl31dvb101832`) conta como um unico
   VIN, tanto para remover quanto para destacar duplicatas.

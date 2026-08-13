@@ -36,6 +36,31 @@ h1 {
   font-weight: 600;
 }
 
+.dupe-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a6b00;
+}
+
+.warn-btn {
+  border: 1px solid #f0b429;
+  background: #fff8e6;
+  color: #7a5400;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.warn-btn:hover:not(:disabled) {
+  background: #ffefc6;
+}
+
+.warn-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .danger-btn {
   border: 1px solid #d0392f;
   background: #fff;

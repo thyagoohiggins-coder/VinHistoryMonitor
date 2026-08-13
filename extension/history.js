@@ -8,6 +8,8 @@ const YEARS_HISTORY_ONLY = [2027];
 const calendarContainer = document.getElementById("calendarContainer");
 const emptyYearsMsg = document.getElementById("emptyYearsMsg");
 const totalCountEl = document.getElementById("totalCount");
+const dupeCountEl = document.getElementById("dupeCount");
+const dedupeNowBtn = document.getElementById("dedupeNowBtn");
 const clearAllBtn = document.getElementById("clearAllBtn");
 
 const dayPanel = document.getElementById("dayPanel");
@@ -122,6 +124,11 @@ function renderCalendar(history) {
 
   totalCountEl.textContent = `${history.length} VIN${history.length === 1 ? "" : "s"} no historico`;
 
+  const redundant = vinCountRedundant(history);
+  dupeCountEl.textContent =
+    redundant > 0 ? `${redundant} duplicado${redundant === 1 ? "" : "s"}` : "";
+  dedupeNowBtn.disabled = redundant === 0;
+
   const yearsToRender = [
     ...new Set([
       ...YEARS_ALWAYS_SHOWN,
@@ -212,6 +219,24 @@ function closeDayPanel() {
 }
 
 closeDayPanelBtn.addEventListener("click", closeDayPanel);
+
+dedupeNowBtn.addEventListener("click", async () => {
+  const redundant = vinCountRedundant(currentHistory);
+  if (redundant === 0) {
+    return;
+  }
+
+  const confirmed = confirm(
+    `Remover ${redundant} registro${redundant === 1 ? "" : "s"} duplicado${redundant === 1 ? "" : "s"}?\n\n` +
+      "De cada VIN repetido fica apenas o registro mais recente. " +
+      "Os registros mais antigos desses VINs saem do calendario."
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  await vinRemoveDuplicatesNow();
+});
 
 clearAllBtn.addEventListener("click", async () => {
   if (!confirm("Apagar todo o historico de VINs? Essa acao nao pode ser desfeita.")) {
