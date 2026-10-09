@@ -27,17 +27,11 @@ registro.
 - **Comparacao tolerante:** o mesmo VIN escrito com espacos, hifens ou em
   minusculas (`95PEFL31 DVB101832`, `95pefl31dvb101832`) conta como um unico
   VIN, tanto para remover quanto para destacar duplicatas.
-- **Turnos configuraveis:** 1º, 2º e 3º turnos, cada um com horario de inicio
-  e fim editaveis no popup (padrao 06:00-14:00, 14:00-22:00 e 22:00-06:00).
-  O 3º turno atravessa a meia-noite corretamente: um VIN registrado as 23h e
-  outro as 02h caem no mesmo turno.
 - **Separacao e contagem por turno:** os VINs sao classificados pelo horario
   em que foram registrados. O popup e a lista mostram o total de VINs de
-  cada turno, e a lista agrupa os VINs por turno, com a quantidade de cada um. Registros em horarios nao cobertos por
-  nenhum turno aparecem em "Fora de turno", e o popup avisa quando os
-  horarios configurados deixam buracos ou se sobrepoem.
-- **Destaque de duplicatas:** VINs que aparecem mais de uma vez no historico
-  sao destacados (borda/fundo amarelo e etiqueta "duplicado") tanto na lista
+  cada turno, e a lista agrupa os VINs por turno, com a quantidade de cada um. 
+- **Destaque de "Já lançado":** VINs que aparecem mais de uma vez no historico
+  sao destacados (borda/fundo amarelo e etiqueta "Já lançado") tanto na lista
   do popup quanto na pagina da lista.
 - **Lista de VINs:** pagina dedicada (aberta pelo botao "Ver lista de VINs"
   no popup) com os VINs do dia separados por turno, quantidade de cada turno,
@@ -48,7 +42,7 @@ registro.
   conter so o dia de producao atual. A limpeza roda por alarme da extensao e
   tambem ao abrir o navegador, o popup ou a lista (cobre o navegador fechado
   na virada). Pode ser desligada no popup ("Apagar VINs ao fim do 3º turno").
-  Quem nunca alterou os horarios antigos (06-14-22) recebe os novos.
+  Os horarios dos turnos sao fixos (nao ha opcao de edita-los).
 - **Apagar:** cada VIN tem sua lixeira; "Apagar historico geral" (popup) e
   "Apagar lista" (pagina da lista) removem tudo de uma vez.
 - **Banco de reparos com sugestoes:** o campo "PRINCIPAL REPARO" e

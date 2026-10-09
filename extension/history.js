@@ -72,7 +72,7 @@ function buildEntry(entry, duplicates) {
   if (isDuplicate) {
     const tag = document.createElement("span");
     tag.className = "duplicate-tag";
-    tag.textContent = "duplicado";
+    tag.textContent = "Já lançado";
     li.appendChild(tag);
   }
 
@@ -147,7 +147,7 @@ function render(history) {
 
   const redundant = vinCountRedundant(currentHistory);
   dupeCountEl.textContent =
-    redundant > 0 ? `${redundant} duplicado${redundant === 1 ? "" : "s"}` : "";
+    redundant > 0 ? `${redundant} já lançado${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}` : "";
   dedupeNowBtn.disabled = redundant === 0;
 
   renderShiftCounts(currentHistory, currentShifts);
@@ -163,8 +163,8 @@ dedupeNowBtn.addEventListener("click", async () => {
   }
 
   const confirmed = confirm(
-    `Remover ${redundant} registro${redundant === 1 ? "" : "s"} duplicado${redundant === 1 ? "" : "s"}?\n\n` +
-      "De cada VIN repetido fica apenas o registro mais recente."
+    `Remover ${redundant} registro${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}?\n\n` +
+      "De cada VIN já lançado fica apenas o registro mais recente."
   );
   if (confirmed) {
     await vinRemoveDuplicatesNow();
@@ -186,9 +186,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes[VIN_SETTINGS_KEY]) {
     const settings = { ...VIN_DEFAULT_SETTINGS, ...(changes[VIN_SETTINGS_KEY].newValue || {}) };
     autoPurge = settings.autoPurgeEnabled;
-    if (Array.isArray(settings.shifts) && settings.shifts.length > 0) {
-      currentShifts = settings.shifts;
-    }
     renderPurgeInfo();
     render(currentHistory);
   }

@@ -19,28 +19,16 @@
     <section class="shifts">
       <h2 class="section-title">VINs por turno</h2>
       <ul id="shiftCounts" class="shift-counts"></ul>
-
-      <button id="toggleShiftCfgBtn" class="link-toggle" type="button">
-        Definir horarios dos turnos
-      </button>
-
-      <div id="shiftConfig" class="shift-config hidden">
-        <div id="shiftRows"></div>
-        <p id="shiftWarning" class="shift-warning"></p>
-        <button id="resetShiftsBtn" class="link-toggle" type="button">
-          Restaurar horarios padrao
-        </button>
-      </div>
     </section>
 
     <section class="settings">
       <label class="switch-row">
-        <span>Remover VINs duplicados automaticamente</span>
+        <span>Remover VINs ja lancados repetidos automaticamente</span>
         <input type="checkbox" id="dedupeToggle" />
       </label>
       <p class="hint">
         Desativado por padrao: todos os VINs ficam no historico, mesmo os
-        repetidos (destacados abaixo). Ao ativar, o historico ja existente
+        repetidos (marcados como “Já lançado” abaixo). Ao ativar, o historico ja existente
         tambem e limpo, mantendo so o registro mais recente de cada VIN.
       </p>
       <label class="switch-row">
@@ -52,7 +40,7 @@
         (inicio do 1º turno, 06:00 por padrao).
       </p>
       <p id="dupeStatus" class="dupe-status"></p>
-      <button id="dedupeNowBtn" class="dedupe-now-btn">Remover duplicatas agora</button>
+      <button id="dedupeNowBtn" class="dedupe-now-btn">Remover repetidos agora</button>
     </section>
 
     <section class="repairs">

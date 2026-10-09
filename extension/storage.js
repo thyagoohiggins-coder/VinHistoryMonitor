@@ -3,18 +3,11 @@
 
 const VIN_STORAGE_KEY = "vinHistory";
 const VIN_SETTINGS_KEY = "vinSettings";
+// Horarios FIXOS dos turnos (nao sao configuraveis).
 const VIN_DEFAULT_SHIFTS = [
   { id: "t1", label: "1º turno", start: "06:00", end: "15:48" },
   { id: "t2", label: "2º turno", start: "15:48", end: "01:00" },
   { id: "t3", label: "3º turno", start: "01:00", end: "06:00" },
-];
-
-// Horarios padrao de versoes anteriores: quem nunca os alterou passa para os
-// novos automaticamente.
-const VIN_LEGACY_DEFAULT_SHIFTS = [
-  { id: "t1", label: "1º turno", start: "06:00", end: "14:00" },
-  { id: "t2", label: "2º turno", start: "14:00", end: "22:00" },
-  { id: "t3", label: "3º turno", start: "22:00", end: "06:00" },
 ];
 
 const VIN_DEFAULT_SETTINGS = {
@@ -42,13 +35,8 @@ async function vinGetSettings() {
   const { [VIN_SETTINGS_KEY]: settings } = await chrome.storage.local.get(VIN_SETTINGS_KEY);
   const merged = { ...VIN_DEFAULT_SETTINGS, ...(settings || {}) };
 
-  // Um valor gravado por uma versao antiga (ou corrompido) nao pode deixar a
-  // extensao sem turnos.
-  if (!Array.isArray(merged.shifts) || merged.shifts.length === 0) {
-    merged.shifts = VIN_DEFAULT_SHIFTS;
-  } else if (JSON.stringify(merged.shifts) === JSON.stringify(VIN_LEGACY_DEFAULT_SHIFTS)) {
-    merged.shifts = VIN_DEFAULT_SHIFTS;
-  }
+  // Os turnos sao fixos: qualquer horario gravado por versoes antigas e ignorado.
+  merged.shifts = VIN_DEFAULT_SHIFTS;
 
   return merged;
 }
