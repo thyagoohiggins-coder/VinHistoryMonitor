@@ -47,6 +47,16 @@
       <button id="dedupeNowBtn" class="dedupe-now-btn">Remover duplicatas agora</button>
     </section>
 
+    <section class="repairs">
+      <h2 class="section-title">Banco de reparos</h2>
+      <p id="repairCount" class="hint"></p>
+      <button id="toggleRepairListBtn" class="link-toggle" type="button">Ver reparos aprendidos</button>
+      <div id="repairPanel" class="hidden">
+        <ul id="repairList" class="repair-list"></ul>
+        <button id="clearRepairsBtn" class="dedupe-now-btn" type="button">Apagar banco de reparos</button>
+      </div>
+    </section>
+
     <section class="actions">
       <button id="openCalendarBtn">Ver calendario 2026/2027</button>
     </section>
@@ -62,6 +72,7 @@
     </button>
 
     <script src="storage.js"></script>
+    <script src="repairs.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

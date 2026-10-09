@@ -219,7 +219,57 @@ function render(history) {
   }
 }
 
+const repairCountEl = document.getElementById("repairCount");
+const repairPanelEl = document.getElementById("repairPanel");
+const repairListEl = document.getElementById("repairList");
+const toggleRepairListBtn = document.getElementById("toggleRepairListBtn");
+const clearRepairsBtn = document.getElementById("clearRepairsBtn");
+
+function renderRepairs(db) {
+  repairCountEl.textContent = db.length === 0
+    ? "Nenhum reparo aprendido ainda. Eles sao salvos ao preencher o campo PRINCIPAL REPARO."
+    : `${db.length} reparo${db.length === 1 ? "" : "s"} aprendido${db.length === 1 ? "" : "s"}.`;
+  clearRepairsBtn.disabled = db.length === 0;
+
+  repairListEl.innerHTML = "";
+  const sorted = [...db].sort((a, b) => b.count - a.count || b.lastUsed - a.lastUsed);
+  for (const item of sorted) {
+    const li = document.createElement("li");
+    li.className = "repair-item";
+
+    const text = document.createElement("span");
+    text.className = "repair-text";
+    text.textContent = item.text;
+
+    const count = document.createElement("span");
+    count.className = "repair-uses";
+    count.textContent = `${item.count}x`;
+
+    const del = document.createElement("button");
+    del.className = "delete-entry-btn";
+    del.type = "button";
+    del.title = "Remover este reparo";
+    del.textContent = "🗑";
+    del.addEventListener("click", () => repairDelete(item.key));
+
+    li.append(text, count, del);
+    repairListEl.appendChild(li);
+  }
+}
+
+toggleRepairListBtn.addEventListener("click", () => {
+  const escondido = repairPanelEl.classList.toggle("hidden");
+  toggleRepairListBtn.textContent = escondido ? "Ver reparos aprendidos" : "Ocultar reparos aprendidos";
+});
+
+clearRepairsBtn.addEventListener("click", async () => {
+  if (confirm("Apagar todo o banco de reparos aprendidos? Essa acao nao pode ser desfeita.")) {
+    await repairClear();
+  }
+});
+
 async function load() {
+  repairGetAll().then(renderRepairs);
   const [history, settings] = await Promise.all([vinGetHistory(), vinGetSettings()]);
   dedupeToggle.checked = settings.dedupeEnabled;
   currentShifts = settings.shifts;
@@ -284,6 +334,9 @@ openCalendarBtn.addEventListener("click", () => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") {
     return;
+  }
+  if (changes[REPAIR_STORAGE_KEY]) {
+    renderRepairs(changes[REPAIR_STORAGE_KEY].newValue || []);
   }
   if (changes[VIN_STORAGE_KEY]) {
     render(changes[VIN_STORAGE_KEY].newValue || []);

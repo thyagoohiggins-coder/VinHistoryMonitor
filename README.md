@@ -51,6 +51,12 @@ registro.
   dia") quanto no calendario (clicar no dia e usar "Apagar VINs deste dia") e
   possivel remover apenas os VINs de uma data especifica. O botao "Apagar
   historico geral" remove tudo de uma vez.
+- **Banco de reparos com sugestoes:** o campo "PRINCIPAL REPARO" e
+  monitorado; cada reparo digitado e aprendido (ao sair do campo) e guardado
+  com a quantidade de usos. Ao digitar, um balao abaixo do campo mostra
+  reparos parecidos (ignora acentos/maiusculas e tolera erros de digitacao).
+  Clique, ou use as setas + Enter, para preencher o campo. O popup lista os
+  reparos aprendidos, permite remover um a um ou apagar o banco.
 - Contagem de VINs no historico exibida no popup e como badge no icone da
   extensao.
 
@@ -75,6 +81,8 @@ extension/
   icons/          # Icones 16/32/48/128 usados na barra e na loja
   storage.js      # Funcoes compartilhadas de acesso ao chrome.storage.local
   content.js      # Detecta o campo VIN e grava o historico
+  repairs.js      # Banco de reparos: aprendizado e busca por similaridade
+  repair-suggest.js # Balao de sugestoes no campo PRINCIPAL REPARO
   background.js   # Mantem o badge do icone com a contagem de VINs
   popup.html/js/css   # Popup: configuracoes, historico recente, apagar por dia/geral
   history.html/js/css # Pagina de calendario 2026/2027 e detalhe por dia
@@ -85,3 +93,4 @@ O historico e armazenado localmente via `chrome.storage.local`:
 - `vinHistory`: lista de objetos `{ vin, timestamp }`.
 - `vinSettings`: `{ dedupeEnabled: boolean, shifts: [{ id, label, start, end }] }`
   (`dedupeEnabled` padrao `false`; `shifts` com os tres turnos padrao).
+- `repairDb`: lista de `{ key, text, count, lastUsed }` (reparos aprendidos).

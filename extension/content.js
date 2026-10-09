@@ -42,7 +42,7 @@ async function saveVin(rawValue) {
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
 // aria-label e, por fim, subindo pelos ancestrais ate achar um texto curto
 // que contenha "VIN" (a pergunta do formulario).
-function getFieldLabelText(input) {
+function getFieldLabelText(input, labelRegex = VIN_LABEL_REGEX) {
   const labelledBy = input.getAttribute("aria-labelledby");
   if (labelledBy) {
     const text = labelledBy
@@ -73,7 +73,7 @@ function getFieldLabelText(input) {
   while (node && depth < LABEL_SEARCH_MAX_DEPTH) {
     const text = (node.textContent || "").trim();
 
-    if (text && text.length <= LABEL_TEXT_MAX_LENGTH && VIN_LABEL_REGEX.test(text)) {
+    if (text && text.length <= LABEL_TEXT_MAX_LENGTH && labelRegex.test(text)) {
       return text;
     }
 
