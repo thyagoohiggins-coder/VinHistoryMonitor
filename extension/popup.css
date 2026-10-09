@@ -427,16 +427,11 @@ h1 {
 }
 
 .signature {
-  position: sticky;
+  position: fixed;
+  right: 8px;
   bottom: 4px;
-  width: fit-content;
-  margin: 12px 0 0 auto;
-  padding: 0 6px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.85);
-  pointer-events: none;
   font-family: "Segoe Script", "Brush Script MT", cursive;
-  font-size: 15px;
-  color: #0b8043;
-  opacity: 0.85;
+  font-size: 11px;
+  color: #000;
+  pointer-events: none;
 }
