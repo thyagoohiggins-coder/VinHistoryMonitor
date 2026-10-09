@@ -43,34 +43,42 @@ async function saveVin(rawValue) {
 // aria-label e, por fim, subindo pelos ancestrais ate achar um texto curto
 // que contenha "VIN" (a pergunta do formulario).
 function getFieldLabelText(input, labelRegex = VIN_LABEL_REGEX) {
+  // Junta TODAS as fontes de rotulo (e nao so a primeira que existir): um
+  // aria-labelledby que aponta so para uma descricao nao pode esconder o
+  // titulo da pergunta.
+  const sources = [];
+
   const labelledBy = input.getAttribute("aria-labelledby");
   if (labelledBy) {
-    const text = labelledBy
-      .split(/\s+/)
-      .map((id) => document.getElementById(id)?.textContent || "")
-      .join(" ")
-      .trim();
-    if (text) {
-      return text;
-    }
+    sources.push(
+      labelledBy
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent || "")
+        .join(" ")
+    );
   }
 
-  const ariaLabel = input.getAttribute("aria-label");
-  if (ariaLabel) {
-    return ariaLabel;
-  }
+  sources.push(input.getAttribute("aria-label") || "");
 
   if (input.id) {
-    const explicitLabel = document.querySelector(`label[for="${CSS.escape(input.id)}"]`);
-    if (explicitLabel?.textContent) {
-      return explicitLabel.textContent;
-    }
+    sources.push(document.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent || "");
+  }
+
+  const direct = sources.find((text) => text.trim() && labelRegex.test(text));
+  if (direct) {
+    return direct;
   }
 
   let node = input.parentElement;
   let depth = 0;
 
   while (node && depth < LABEL_SEARCH_MAX_DEPTH) {
+    // Se o ancestral ja contem outros campos de texto, o texto dele mistura
+    // varias perguntas: o rotulo de OUTRO campo faria este parecer o certo.
+    if (countTextFields(node) > 1) {
+      break;
+    }
+
     const text = (node.textContent || "").trim();
 
     if (text && text.length <= LABEL_TEXT_MAX_LENGTH && labelRegex.test(text)) {
@@ -81,7 +89,17 @@ function getFieldLabelText(input, labelRegex = VIN_LABEL_REGEX) {
     depth += 1;
   }
 
-  return "";
+  return sources.find((text) => text.trim()) || "";
+}
+
+function countTextFields(node) {
+  let count = 0;
+  for (const el of node.querySelectorAll('input, textarea, [contenteditable="true"]')) {
+    if (el.tagName !== "INPUT" || isVinCandidateInput(el)) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function isVinCandidateInput(input) {
