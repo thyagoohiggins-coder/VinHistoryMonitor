@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VIN History Monitor",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Monitora o campo VIN de formularios (Google Forms, Microsoft Forms), registra cada valor com a hora, separa por turno com contagem, destaca duplicatas (remocao automatica opcional) e mostra um calendario de historico por dia e sugere reparos parecidos (aprendidos) no campo PRINCIPAL REPARO.",
   "permissions": ["storage"],
   "host_permissions": [
@@ -22,7 +22,8 @@
         "https://forms.cloud.microsoft/*"
       ],
       "js": ["storage.js", "content.js", "repairs.js", "repair-suggest.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "icons": {

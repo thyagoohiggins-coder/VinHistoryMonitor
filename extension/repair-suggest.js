@@ -107,6 +107,16 @@ function ensureRepairBox() {
   return repairBox;
 }
 
+function showRepairToast(message) {
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.cssText =
+    "position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#0f766e;color:#fff;" +
+    "padding:8px 12px;border-radius:8px;font:13px system-ui,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25);";
+  document.documentElement.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
 function hideRepairBox() {
   repairItems = [];
   repairActive = -1;
@@ -146,12 +156,12 @@ function pickRepair(index) {
   repairInput.focus();
 }
 
-function renderRepairBox() {
+function renderRepairBox(emptyMessage) {
   const box = ensureRepairBox();
   box.textContent = "";
 
   const title = document.createElement("div");
-  title.textContent = "Reparos similares";
+  title.textContent = emptyMessage || "Reparos similares";
   title.style.cssText = "padding:2px 12px 4px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;";
   box.appendChild(title);
 
@@ -176,9 +186,15 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  repairItems = repairSuggest(repairDb, getFieldValue(repairInput));
+  const query = getFieldValue(repairInput);
+  repairItems = repairSuggest(repairDb, query);
   if (repairItems.length === 0) {
-    hideRepairBox();
+    // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
+    if (repairNormalize(query).length >= 2) {
+      renderRepairBox(`Nenhum reparo parecido (${repairDb.length} no banco)`);
+    } else {
+      hideRepairBox();
+    }
     return;
   }
   renderRepairBox();
@@ -204,6 +220,7 @@ function learnRepair() {
 function attachRepairInput(input) {
   repairInput = input;
   console.log("[VIN Monitor] campo PRINCIPAL REPARO encontrado; sugestoes ativas.");
+  showRepairToast(`Sugestoes de reparo ativas (${repairDb.length} no banco)`);
   if (input.dataset.vinMonitorRepair === "true") {
     return;
   }
