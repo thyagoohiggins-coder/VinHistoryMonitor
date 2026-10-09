@@ -69,6 +69,11 @@ function buildEntry(entry, duplicates) {
   vinEl.textContent = entry.vin;
   li.appendChild(vinEl);
 
+  const badges = vinBuildModelColorBadges(entry);
+  if (badges) {
+    li.appendChild(badges);
+  }
+
   if (isDuplicate) {
     const tag = document.createElement("span");
     tag.className = "duplicate-tag";

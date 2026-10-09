@@ -110,7 +110,7 @@ async function vinRemoveDuplicatesNow() {
 }
 
 // Acrescenta um VIN ao historico respeitando a opcao de remover duplicatas.
-async function vinAddEntry(vin, parts) {
+async function vinAddEntry(vin, details) {
   const key = vinCompareKey(vin);
 
   // As configuracoes sao lidas dentro da fila para que uma mudanca na opcao
@@ -134,9 +134,7 @@ async function vinAddEntry(vin, parts) {
     }
 
     const entry = { vin, timestamp };
-    if (Array.isArray(parts)) {
-      entry.parts = parts;
-    }
+    Object.assign(entry, details || {});
     base.unshift(entry);
     return base;
   });
@@ -182,18 +180,15 @@ async function vinPurgeExpired() {
   return vinMutateHistory((history) => vinDropExpired(history, settings.shifts));
 }
 
-// Atualiza as pecas faltantes (cripple) de um registro ja gravado.
-async function vinSetEntryParts(timestamp, parts) {
+// Atualiza modelo, cor e pecas faltantes de um registro ja gravado.
+async function vinSetEntryDetails(timestamp, details) {
   return vinMutateHistory((history) =>
     history.map((entry) => {
       if (entry.timestamp !== timestamp) {
         return entry;
       }
-      const same =
-        Array.isArray(entry.parts) &&
-        entry.parts.length === parts.length &&
-        entry.parts.every((part, i) => part === parts[i]);
-      return same ? entry : { ...entry, parts };
+      const merged = { ...entry, ...details };
+      return JSON.stringify(merged) === JSON.stringify(entry) ? entry : merged;
     })
   );
 }
@@ -336,4 +331,22 @@ function vinBuildPartsRow(entry) {
     row.appendChild(chip);
   }
   return row;
+}
+
+// Etiquetas de modelo e cor para ficar ao lado do VIN (null se nao houver).
+function vinBuildModelColorBadges(entry) {
+  const items = [entry.model, entry.color].filter(Boolean);
+  if (items.length === 0) {
+    return null;
+  }
+  const box = document.createElement("span");
+  box.className = "vin-badges";
+  [["model", entry.model], ["color", entry.color]].forEach(([kind, value]) => {
+    if (!value) return;
+    const badge = document.createElement("span");
+    badge.className = `vin-badge vin-badge-${kind}`;
+    badge.textContent = value;
+    box.appendChild(badge);
+  });
+  return box;
 }

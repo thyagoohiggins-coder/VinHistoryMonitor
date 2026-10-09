@@ -100,6 +100,11 @@ function render(history) {
     vinEl.textContent = entry.vin;
     vinRow.appendChild(vinEl);
 
+    const badges = vinBuildModelColorBadges(entry);
+    if (badges) {
+      vinRow.appendChild(badges);
+    }
+
     if (isDuplicate) {
       const tag = document.createElement("span");
       tag.className = "duplicate-tag";

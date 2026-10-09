@@ -14,7 +14,7 @@ function isCheckboxChecked(el) {
 
 // Texto da opcao: aria-label / label associado, ou o texto do menor ancestral
 // que contenha so esta caixa. Na opcao "Outra" soma o texto digitado.
-function getCheckboxOptionText(box) {
+function getCheckboxOptionText(box, selector = PARTS_CHECKBOX_SELECTOR) {
   const ariaLabel = (box.getAttribute("aria-label") || "").trim();
   const labelledBy = box.getAttribute("aria-labelledby");
   const fromIds = labelledBy
@@ -27,7 +27,7 @@ function getCheckboxOptionText(box) {
 
   let wrapper = box.parentElement;
   for (let i = 0; i < 6 && wrapper; i += 1) {
-    if (wrapper.querySelectorAll(PARTS_CHECKBOX_SELECTOR).length > 1) {
+    if (wrapper.querySelectorAll(selector).length > 1) {
       wrapper = null;
       break;
     }
@@ -54,32 +54,34 @@ function getCheckboxOptionText(box) {
   return base || placeholder.trim();
 }
 
-// Container da pergunta: o menor ancestral do titulo que ja contem caixas.
-function findPartsQuestionContainer() {
+// Container da pergunta: o menor ancestral do titulo que ja contem opcoes.
+// `titleRegex` casa com o titulo; `maxTitle` limita o tamanho do texto dele.
+function findQuestionContainer(titleRegex, selector, prefilter, maxTitle = PARTS_TITLE_MAX_LENGTH) {
   const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (!/FALTANTES|PE[ÇC]AS/i.test(node.nodeValue || "")) {
+    if (!prefilter.test(node.nodeValue || "")) {
       continue;
     }
 
     let title = node.parentElement;
     for (let i = 0; i < 4 && title; i += 1) {
-      const text = title.textContent || "";
-      if (text.length <= PARTS_TITLE_MAX_LENGTH && PARTS_LABEL_REGEX.test(text)) {
+      const text = (title.textContent || "").trim();
+      if (text.length <= maxTitle && titleRegex.test(text)) {
         break;
       }
       title = title.parentElement;
     }
-    if (!title || !PARTS_LABEL_REGEX.test(title.textContent || "")) {
+    if (!title) {
       continue;
     }
-    if ((title.textContent || "").length > PARTS_TITLE_MAX_LENGTH) {
+    const titleText = (title.textContent || "").trim();
+    if (titleText.length > maxTitle || !titleRegex.test(titleText)) {
       continue;
     }
 
     let container = title;
     for (let i = 0; i < 10 && container; i += 1) {
-      if (container.querySelector(PARTS_CHECKBOX_SELECTOR)) {
+      if (container.querySelector(selector)) {
         return container;
       }
       container = container.parentElement;
@@ -88,22 +90,47 @@ function findPartsQuestionContainer() {
   return null;
 }
 
-// Lista de opcoes marcadas, ou null se a pergunta nao esta na pagina.
-function readMissingParts() {
-  const container = findPartsQuestionContainer();
-  if (!container) {
-    return null;
-  }
-
-  const parts = [];
-  for (const box of container.querySelectorAll(PARTS_CHECKBOX_SELECTOR)) {
+// Textos das opcoes marcadas dentro do container.
+function readCheckedTexts(container, selector) {
+  const texts = [];
+  for (const box of container.querySelectorAll(selector)) {
     if (!isCheckboxChecked(box)) {
       continue;
     }
-    const text = getCheckboxOptionText(box);
-    if (text && !parts.includes(text)) {
-      parts.push(text);
+    const text = getCheckboxOptionText(box, selector);
+    if (text && !texts.includes(text)) {
+      texts.push(text);
     }
   }
-  return parts;
+  return texts;
+}
+
+// Lista de opcoes marcadas, ou null se a pergunta nao esta na pagina.
+function readMissingParts() {
+  const container = findQuestionContainer(PARTS_LABEL_REGEX, PARTS_CHECKBOX_SELECTOR, /FALTANTES|PE[ÇC]AS/i);
+  return container ? readCheckedTexts(container, PARTS_CHECKBOX_SELECTOR) : null;
+}
+
+// Perguntas de escolha unica (MODELO e COR): titulo curto que COMECA com o
+// nome da pergunta (com ou sem numero na frente).
+const PARTS_RADIO_SELECTOR = 'input[type="radio"], [role="radio"]';
+const MODEL_TITLE_REGEX = /^(?:\d+\s*[.)]\s*)?MODELO\b/i;
+const COLOR_TITLE_REGEX = /^(?:\d+\s*[.)]\s*)?COR\b/i;
+
+// Opcao marcada ("" se nenhuma) ou null se a pergunta nao esta na pagina.
+function readRadioAnswer(titleRegex, prefilter) {
+  const container = findQuestionContainer(titleRegex, PARTS_RADIO_SELECTOR, prefilter, 60);
+  return container ? readCheckedTexts(container, PARTS_RADIO_SELECTOR)[0] || "" : null;
+}
+
+// Modelo, cor e pecas faltantes; so inclui o que foi encontrado na pagina.
+function readFormDetails() {
+  const details = {};
+  const parts = readMissingParts();
+  if (parts) details.parts = parts;
+  const model = readRadioAnswer(MODEL_TITLE_REGEX, /MODELO/i);
+  if (model !== null) details.model = model;
+  const color = readRadioAnswer(COLOR_TITLE_REGEX, /\bCOR\b/i);
+  if (color !== null) details.color = color;
+  return details;
 }

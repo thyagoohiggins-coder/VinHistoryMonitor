@@ -41,12 +41,12 @@ async function saveVin(rawValue) {
 
   recordedValue = vin;
 
-  const updated = await vinAddEntry(vin, readMissingParts());
+  const updated = await vinAddEntry(vin, readFormDetails());
   // O registro novo e sempre o primeiro da lista.
   currentEntryTimestamp = updated[0]?.timestamp ?? null;
 }
 
-// As opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
+// Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
 // clicar numa caixa, atualiza o registro do VIN atual.
 let partsRefreshTimer = null;
 function refreshPartsSoon() {
@@ -62,9 +62,9 @@ function refreshPartsSoon() {
     ) {
       return;
     }
-    const parts = readMissingParts();
-    if (parts) {
-      vinSetEntryParts(currentEntryTimestamp, parts);
+    const details = readFormDetails();
+    if (Object.keys(details).length > 0) {
+      vinSetEntryDetails(currentEntryTimestamp, details);
     }
   }, 150);
 }

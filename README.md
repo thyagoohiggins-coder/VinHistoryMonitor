@@ -43,6 +43,9 @@ registro.
   tambem ao abrir o navegador, o popup ou a lista (cobre o navegador fechado
   na virada). Pode ser desligada no popup ("Apagar VINs ao fim do 3º turno").
   Os horarios dos turnos sao fixos (nao ha opcao de edita-los).
+- **Modelo e cor:** ao lado de cada VIN (lista e popup) aparecem etiquetas com
+  a opcao marcada nas perguntas "MODELO" e "COR" do formulario, atualizadas
+  se voce trocar a resposta depois de o VIN ja ter sido registrado.
 - **Cripple (PEÇAS FALTANTES):** a lista (e o popup) mostram, na frente de cada
   VIN, as opcoes marcadas na pergunta "PEÇAS FALTANTES" do formulario (varias
   ou todas podem estar marcadas; "Outra" mostra o texto digitado). As opcoes
@@ -91,7 +94,7 @@ extension/
 
 O historico e armazenado localmente via `chrome.storage.local`:
 
-- `vinHistory`: lista de objetos `{ vin, timestamp, parts? }`.
+- `vinHistory`: lista de objetos `{ vin, timestamp, model?, color?, parts? }`.
 - `vinSettings`: `{ dedupeEnabled: boolean, autoPurgeEnabled: boolean, shifts: [{ id, label, start, end }] }`
   (`dedupeEnabled` padrao `false`; `shifts` com os tres turnos padrao).
 - `repairDb`: lista de `{ key, text, count, lastUsed }` (reparos aprendidos).
