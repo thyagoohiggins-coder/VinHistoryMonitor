@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>Calendario de VINs</title>
+    <title>Lista de VINs</title>
     <link rel="stylesheet" href="history.css" />
   </head>
   <body>
@@ -11,19 +11,16 @@
         <span class="brand-title">Reparo FA</span>
         <span class="brand-sub">Controle de VINs</span>
       </div>
-      <h1>Calendario de VINs</h1>
+      <h1>Lista de VINs</h1>
       <div class="header-actions">
         <span id="totalCount" class="total-count"></span>
         <span id="dupeCount" class="dupe-count"></span>
         <button id="dedupeNowBtn" class="warn-btn">Remover duplicatas</button>
-        <button id="clearAllBtn" class="danger-btn">Apagar historico geral</button>
+        <button id="clearAllBtn" class="danger-btn">Apagar lista</button>
       </div>
     </header>
 
-    <p class="legend">
-      <span class="legend-item"><span class="dot has-data"></span> dia com VIN registrado</span>
-      <span class="legend-item"><span class="dot has-duplicate"></span> dia com VIN duplicado</span>
-    </p>
+    <p id="purgeInfo" class="purge-info"></p>
 
     <section class="shift-summary">
       <h2 class="section-title">VINs por turno</h2>
@@ -33,17 +30,11 @@
       </p>
     </section>
 
-    <div id="calendarContainer" class="calendar-container"></div>
+    <div class="toolbar">
+      <input id="searchInput" type="search" placeholder="Buscar VIN..." autocomplete="off" />
+    </div>
 
-    <p id="emptyYearsMsg" class="empty-years-msg"></p>
-
-    <aside id="dayPanel" class="day-panel hidden">
-      <div class="day-panel-header">
-        <h2 id="dayPanelTitle"></h2>
-        <button id="closeDayPanel" class="link-btn">Fechar</button>
-      </div>
-      <ul id="dayPanelList" class="day-panel-list"></ul>
-    </aside>
+    <div id="listContainer"></div>
 
     <script src="storage.js"></script>
     <script src="history.js"></script>

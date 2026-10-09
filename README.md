@@ -19,7 +19,7 @@ registro.
   registro mais recente de cada VIN; dai em diante, inserir um VIN ja
   existente substitui a entrada antiga.
 - **Remover duplicatas ja registradas:** botao "Remover duplicatas agora" no
-  popup e "Remover duplicatas" no calendario, que limpam de uma vez os VINs
+  popup e "Remover duplicatas" na lista, que limpam de uma vez os VINs
   repetidos que ja estao gravados, mantendo apenas o registro mais recente de
   cada um. Ambas as telas mostram quantos registros duplicados existem e
   pedem confirmacao antes de apagar; o botao fica desabilitado quando nao ha
@@ -32,25 +32,25 @@ registro.
   O 3º turno atravessa a meia-noite corretamente: um VIN registrado as 23h e
   outro as 02h caem no mesmo turno.
 - **Separacao e contagem por turno:** os VINs sao classificados pelo horario
-  em que foram registrados. O popup e o calendario mostram o total de VINs de
-  cada turno, e o painel de um dia no calendario lista os VINs agrupados por
-  turno, com a quantidade de cada um. Registros em horarios nao cobertos por
+  em que foram registrados. O popup e a lista mostram o total de VINs de
+  cada turno, e a lista agrupa os VINs por turno, com a quantidade de cada um. Registros em horarios nao cobertos por
   nenhum turno aparecem em "Fora de turno", e o popup avisa quando os
   horarios configurados deixam buracos ou se sobrepoem.
 - **Destaque de duplicatas:** VINs que aparecem mais de uma vez no historico
   sao destacados (borda/fundo amarelo e etiqueta "duplicado") tanto na lista
-  do popup quanto no painel de um dia especifico no calendario.
-- **Calendario 2026/2027:** pagina dedicada (aberta pelo botao "Ver
-  calendario 2026/2027" no popup) com o calendario completo de 2026 e, assim
-  que houver o primeiro registro em 2027, o calendario desse ano tambem passa
-  a ser exibido. Cada dia com VINs registrados fica destacado em verde (com a
-  quantidade) e em amarelo quando ha algum VIN duplicado naquele dia. Clicar
-  em um dia abre um painel lateral com os VINs registrados e o horario de
-  cada um.
-- **Apagar por dia ou geral:** tanto no popup (campo de data + botao "Apagar
-  dia") quanto no calendario (clicar no dia e usar "Apagar VINs deste dia") e
-  possivel remover apenas os VINs de uma data especifica. O botao "Apagar
-  historico geral" remove tudo de uma vez.
+  do popup quanto na pagina da lista.
+- **Lista de VINs:** pagina dedicada (aberta pelo botao "Ver lista de VINs"
+  no popup) com os VINs do dia separados por turno, quantidade de cada turno,
+  busca por VIN, destaque de duplicados e botao para apagar cada VIN.
+- **Limpeza automatica no fim do 3º turno:** os turnos padrao sao 1º
+  06:00-15:48, 2º 15:48-01:00 e 3º 01:00-06:00. Quando o 3º turno termina
+  (inicio do 1º turno, 06:00) todos os VINs sao apagados; a lista passa a
+  conter so o dia de producao atual. A limpeza roda por alarme da extensao e
+  tambem ao abrir o navegador, o popup ou a lista (cobre o navegador fechado
+  na virada). Pode ser desligada no popup ("Apagar VINs ao fim do 3º turno").
+  Quem nunca alterou os horarios antigos (06-14-22) recebe os novos.
+- **Apagar:** cada VIN tem sua lixeira; "Apagar historico geral" (popup) e
+  "Apagar lista" (pagina da lista) removem tudo de uma vez.
 - **Banco de reparos com sugestoes:** o campo "PRINCIPAL REPARO" e
   monitorado; cada reparo digitado e aprendido (ao sair do campo) e guardado
   com a quantidade de usos. Ao digitar, um balao abaixo do campo mostra
@@ -69,8 +69,7 @@ registro.
 3. Clique em "Carregar sem compactacao" e selecione a pasta `extension/`
    deste repositorio.
 4. Abra o formulario do Google Forms que contem o campo VIN e preencha-o.
-5. Clique no icone da extensao para ver o historico e as opcoes, ou em "Ver
-   calendario 2026/2027" para o calendario por dia.
+5. Clique no icone da extensao para ver o historico e as opcoes, ou em "Ver lista de VINs" para ver os VINs por turno.
 
 ## Estrutura
 
@@ -87,12 +86,12 @@ extension/
   repair-suggest.js # Balao de sugestoes no campo PRINCIPAL REPARO
   background.js   # Mantem o badge do icone com a contagem de VINs
   popup.html/js/css   # Popup: configuracoes, historico recente, apagar por dia/geral
-  history.html/js/css # Pagina de calendario 2026/2027 e detalhe por dia
+  history.html/js/css # Pagina com a lista de VINs por turno
 ```
 
 O historico e armazenado localmente via `chrome.storage.local`:
 
 - `vinHistory`: lista de objetos `{ vin, timestamp }`.
-- `vinSettings`: `{ dedupeEnabled: boolean, shifts: [{ id, label, start, end }] }`
+- `vinSettings`: `{ dedupeEnabled: boolean, autoPurgeEnabled: boolean, shifts: [{ id, label, start, end }] }`
   (`dedupeEnabled` padrao `false`; `shifts` com os tres turnos padrao).
 - `repairDb`: lista de `{ key, text, count, lastUsed }` (reparos aprendidos).

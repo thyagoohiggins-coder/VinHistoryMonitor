@@ -5,6 +5,7 @@ const countNumberEl = document.getElementById("countNumber");
 const countLabelEl = document.getElementById("countLabel");
 const clearBtn = document.getElementById("clearBtn");
 const dedupeToggle = document.getElementById("dedupeToggle");
+const purgeToggle = document.getElementById("purgeToggle");
 const dedupeNowBtn = document.getElementById("dedupeNowBtn");
 const dupeStatusEl = document.getElementById("dupeStatus");
 const openCalendarBtn = document.getElementById("openCalendarBtn");
@@ -306,8 +307,11 @@ document.getElementById("exportRepairsBtn").addEventListener("click", async () =
 
 async function load() {
   repairGetAll().then(renderRepairs);
-  const [history, settings] = await Promise.all([vinGetHistory(), vinGetSettings()]);
+  const settings = await vinGetSettings();
+  // Limpa o que ja venceu antes de mostrar a lista.
+  const history = await vinPurgeExpired();
   dedupeToggle.checked = settings.dedupeEnabled;
+  purgeToggle.checked = settings.autoPurgeEnabled;
   currentShifts = settings.shifts;
   renderShiftConfig(currentShifts);
   render(history);
@@ -333,6 +337,13 @@ clearBtn.addEventListener("click", async () => {
   }
   await vinMutateHistory(() => []);
   render([]);
+});
+
+purgeToggle.addEventListener("change", async () => {
+  await vinSetSettings({ autoPurgeEnabled: purgeToggle.checked });
+  if (purgeToggle.checked) {
+    render(await vinPurgeExpired());
+  }
 });
 
 dedupeToggle.addEventListener("change", async () => {
@@ -380,6 +391,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes[VIN_SETTINGS_KEY]) {
     const settings = { ...VIN_DEFAULT_SETTINGS, ...(changes[VIN_SETTINGS_KEY].newValue || {}) };
     dedupeToggle.checked = settings.dedupeEnabled;
+    purgeToggle.checked = settings.autoPurgeEnabled;
 
     if (Array.isArray(settings.shifts) && settings.shifts.length > 0) {
       currentShifts = settings.shifts;

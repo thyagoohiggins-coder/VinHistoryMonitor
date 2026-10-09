@@ -4,6 +4,14 @@
 const VIN_STORAGE_KEY = "vinHistory";
 const VIN_SETTINGS_KEY = "vinSettings";
 const VIN_DEFAULT_SHIFTS = [
+  { id: "t1", label: "1º turno", start: "06:00", end: "15:48" },
+  { id: "t2", label: "2º turno", start: "15:48", end: "01:00" },
+  { id: "t3", label: "3º turno", start: "01:00", end: "06:00" },
+];
+
+// Horarios padrao de versoes anteriores: quem nunca os alterou passa para os
+// novos automaticamente.
+const VIN_LEGACY_DEFAULT_SHIFTS = [
   { id: "t1", label: "1º turno", start: "06:00", end: "14:00" },
   { id: "t2", label: "2º turno", start: "14:00", end: "22:00" },
   { id: "t3", label: "3º turno", start: "22:00", end: "06:00" },
@@ -13,6 +21,9 @@ const VIN_DEFAULT_SETTINGS = {
   // Desativado por padrao: por padrao TODAS as entradas ficam no historico,
   // inclusive VINs repetidos (que sao destacados na interface).
   dedupeEnabled: false,
+  // Apaga os VINs quando o dia de producao termina (fim do 3º turno, que e
+  // quando o 1º turno recomeca).
+  autoPurgeEnabled: true,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -34,6 +45,8 @@ async function vinGetSettings() {
   // Um valor gravado por uma versao antiga (ou corrompido) nao pode deixar a
   // extensao sem turnos.
   if (!Array.isArray(merged.shifts) || merged.shifts.length === 0) {
+    merged.shifts = VIN_DEFAULT_SHIFTS;
+  } else if (JSON.stringify(merged.shifts) === JSON.stringify(VIN_LEGACY_DEFAULT_SHIFTS)) {
     merged.shifts = VIN_DEFAULT_SHIFTS;
   }
 
@@ -117,9 +130,14 @@ async function vinAddEntry(vin) {
   return vinMutateHistory(async (history) => {
     const settings = await vinGetSettings();
 
+    // Garante que um dia de producao ja encerrado nao fique misturado com o novo.
+    const current = settings.autoPurgeEnabled
+      ? vinDropExpired(history, settings.shifts)
+      : history;
+
     const base = settings.dedupeEnabled
-      ? history.filter((entry) => vinCompareKey(entry.vin) !== key)
-      : history.slice();
+      ? current.filter((entry) => vinCompareKey(entry.vin) !== key)
+      : current.slice();
 
     // O timestamp identifica cada registro, entao nao pode se repetir.
     let timestamp = Date.now();
@@ -130,6 +148,46 @@ async function vinAddEntry(vin) {
     base.unshift({ vin, timestamp });
     return base;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Dia de producao: comeca quando o 1º turno comeca (fim do 3º turno) e os
+// VINs sao apagados automaticamente nessa virada.
+// ---------------------------------------------------------------------------
+
+// Instante (ms) do inicio do dia de producao mais recente, ate `agora`.
+function vinCycleStart(agora, shifts) {
+  const minutos = vinParseTime(shifts[0]?.start);
+  const base = minutos === null ? 6 * 60 : minutos;
+
+  const inicio = new Date(agora);
+  inicio.setHours(Math.floor(base / 60), base % 60, 0, 0);
+  if (inicio.getTime() > agora) {
+    inicio.setDate(inicio.getDate() - 1);
+  }
+  return inicio.getTime();
+}
+
+// Proxima virada do dia de producao (quando os VINs serao apagados).
+function vinNextCycleStart(agora, shifts) {
+  const proximo = new Date(vinCycleStart(agora, shifts));
+  proximo.setDate(proximo.getDate() + 1);
+  return proximo.getTime();
+}
+
+// Historico sem os VINs de dias de producao ja encerrados.
+function vinDropExpired(history, shifts, agora = Date.now()) {
+  const limite = vinCycleStart(agora, shifts);
+  return history.filter((entry) => entry.timestamp >= limite);
+}
+
+// Apaga do storage os VINs de dias encerrados. Retorna o historico atual.
+async function vinPurgeExpired() {
+  const settings = await vinGetSettings();
+  if (!settings.autoPurgeEnabled) {
+    return vinGetHistory();
+  }
+  return vinMutateHistory((history) => vinDropExpired(history, settings.shifts));
 }
 
 // Chave no formato AAAA-MM-DD no fuso horario local, usada para agrupar por dia.
