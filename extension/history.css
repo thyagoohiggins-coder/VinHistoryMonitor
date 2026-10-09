@@ -338,3 +338,14 @@ h1 {
   color: #333;
   border-color: #d5d5d5;
 }
+
+.signature {
+  position: fixed;
+  right: 20px;
+  bottom: 14px;
+  font-family: "Segoe Script", "Brush Script MT", cursive;
+  font-size: 18px;
+  color: #0b8043;
+  opacity: 0.85;
+  pointer-events: none;
+}
