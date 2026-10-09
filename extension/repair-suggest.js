@@ -20,6 +20,51 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+function isVisibleField(el) {
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+// Plano B, independente da estrutura do HTML: acha o texto da pergunta e
+// devolve o primeiro campo de texto que vem depois dele na pagina.
+function findRepairInputByQuestionText() {
+  const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
+  const fields = [...document.querySelectorAll('input, textarea, [contenteditable="true"]')].filter(
+    (el) => (el.tagName !== "INPUT" || isVinCandidateInput(el)) && isVisibleField(el)
+  );
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!/REPARO|PRINCIPAL/i.test(node.nodeValue || "")) {
+      continue;
+    }
+
+    // O titulo pode estar quebrado em varios elementos: sobe ate achar um
+    // ancestral curto cujo texto completo case com o rotulo.
+    let anchor = node.parentElement;
+    for (let i = 0; i < 4 && anchor; i += 1) {
+      const text = anchor.textContent || "";
+      if (text.length <= 200 && REPAIR_LABEL_REGEX.test(text)) {
+        break;
+      }
+      anchor = anchor.parentElement;
+    }
+    if (!anchor || anchor.closest("#vin-monitor-repair-box, script, style")) {
+      continue;
+    }
+    if (!REPAIR_LABEL_REGEX.test(anchor.textContent || "") || (anchor.textContent || "").length > 200) {
+      continue;
+    }
+
+    const field = fields.find(
+      (el) => anchor.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING && !anchor.contains(el)
+    );
+    if (field) {
+      return field;
+    }
+  }
+  return null;
+}
+
 function findRepairInput() {
   const candidates = document.querySelectorAll('input, textarea, [contenteditable="true"]');
   for (const candidate of candidates) {
@@ -30,7 +75,7 @@ function findRepairInput() {
       return candidate;
     }
   }
-  return null;
+  return findRepairInputByQuestionText();
 }
 
 function setRepairValue(input, text) {
@@ -158,6 +203,7 @@ function learnRepair() {
 
 function attachRepairInput(input) {
   repairInput = input;
+  console.log("[VIN Monitor] campo PRINCIPAL REPARO encontrado; sugestoes ativas.");
   if (input.dataset.vinMonitorRepair === "true") {
     return;
   }
@@ -204,6 +250,10 @@ window.addEventListener("resize", positionRepairBox);
 
 let repairScanPending = false;
 function scanRepair() {
+  // Campo atual ainda na tela: nada a procurar.
+  if (repairInput && repairInput.isConnected) {
+    return;
+  }
   const input = findRepairInput();
   if (input) {
     attachRepairInput(input);
