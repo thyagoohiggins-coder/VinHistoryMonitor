@@ -124,6 +124,10 @@ function render(history) {
 
     li.appendChild(vinRow);
     li.appendChild(timeEl);
+    const partsRow = vinBuildPartsRow(entry);
+    if (partsRow) {
+      li.appendChild(partsRow);
+    }
     listEl.appendChild(li);
   }
 }

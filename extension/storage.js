@@ -110,7 +110,7 @@ async function vinRemoveDuplicatesNow() {
 }
 
 // Acrescenta um VIN ao historico respeitando a opcao de remover duplicatas.
-async function vinAddEntry(vin) {
+async function vinAddEntry(vin, parts) {
   const key = vinCompareKey(vin);
 
   // As configuracoes sao lidas dentro da fila para que uma mudanca na opcao
@@ -133,7 +133,11 @@ async function vinAddEntry(vin) {
       timestamp += 1;
     }
 
-    base.unshift({ vin, timestamp });
+    const entry = { vin, timestamp };
+    if (Array.isArray(parts)) {
+      entry.parts = parts;
+    }
+    base.unshift(entry);
     return base;
   });
 }
@@ -176,6 +180,22 @@ async function vinPurgeExpired() {
     return vinGetHistory();
   }
   return vinMutateHistory((history) => vinDropExpired(history, settings.shifts));
+}
+
+// Atualiza as pecas faltantes (cripple) de um registro ja gravado.
+async function vinSetEntryParts(timestamp, parts) {
+  return vinMutateHistory((history) =>
+    history.map((entry) => {
+      if (entry.timestamp !== timestamp) {
+        return entry;
+      }
+      const same =
+        Array.isArray(entry.parts) &&
+        entry.parts.length === parts.length &&
+        entry.parts.every((part, i) => part === parts[i]);
+      return same ? entry : { ...entry, parts };
+    })
+  );
 }
 
 // Chave no formato AAAA-MM-DD no fuso horario local, usada para agrupar por dia.
@@ -292,4 +312,28 @@ function vinGroupByDate(history) {
     map.get(key).push(entry);
   }
   return map;
+}
+
+// Linha "Cripple: ..." com as pecas faltantes de um registro (undefined se o
+// registro nao tem a informacao).
+function vinBuildPartsRow(entry) {
+  if (!Array.isArray(entry.parts)) {
+    return null;
+  }
+
+  const row = document.createElement("div");
+  row.className = "parts-row" + (entry.parts.length === 0 ? " parts-none" : "");
+
+  const label = document.createElement("span");
+  label.className = "parts-label";
+  label.textContent = entry.parts.length === 0 ? "Cripple: nenhum" : `Cripple (${entry.parts.length}):`;
+  row.appendChild(label);
+
+  for (const part of entry.parts) {
+    const chip = document.createElement("span");
+    chip.className = "part-chip";
+    chip.textContent = part;
+    row.appendChild(chip);
+  }
+  return row;
 }

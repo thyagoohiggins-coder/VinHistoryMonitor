@@ -89,6 +89,11 @@ function buildEntry(entry, duplicates) {
   deleteBtn.addEventListener("click", () => vinDeleteEntry(entry.timestamp));
   li.appendChild(deleteBtn);
 
+  const partsRow = vinBuildPartsRow(entry);
+  if (partsRow) {
+    li.appendChild(partsRow);
+  }
+
   return li;
 }
 

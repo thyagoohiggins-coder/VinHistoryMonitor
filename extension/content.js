@@ -12,12 +12,17 @@ const LABEL_TEXT_MAX_LENGTH = 400;
 // na caixa e clicar fora nao conta como um VIN novo.
 let recordedValue = "";
 
+// Registro (timestamp) do VIN atual, para anexar as pecas faltantes marcadas
+// depois que o VIN ja foi gravado.
+let currentEntryTimestamp = null;
+
 // Quando o campo fica vazio (o formulario foi enviado e limpo, ou o usuario
 // apagou o conteudo), o proximo preenchimento e um registro novo - mesmo que
 // seja exatamente o mesmo VIN de antes.
 function trackFieldCleared(rawValue) {
   if (!vinNormalize(rawValue)) {
     recordedValue = "";
+    currentEntryTimestamp = null;
   }
 }
 
@@ -36,7 +41,36 @@ async function saveVin(rawValue) {
 
   recordedValue = vin;
 
-  await vinAddEntry(vin);
+  const updated = await vinAddEntry(vin, readMissingParts());
+  // O registro novo e sempre o primeiro da lista.
+  currentEntryTimestamp = updated[0]?.timestamp ?? null;
+}
+
+// As opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
+// clicar numa caixa, atualiza o registro do VIN atual.
+let partsRefreshTimer = null;
+function refreshPartsSoon() {
+  clearTimeout(partsRefreshTimer);
+  partsRefreshTimer = setTimeout(() => {
+    // So atualiza enquanto o campo ainda mostra o VIN gravado: depois do
+    // envio o formulario volta zerado e apagaria as pecas ja registradas.
+    if (
+      currentEntryTimestamp === null ||
+      !currentVinInput ||
+      !currentVinInput.isConnected ||
+      vinNormalize(getFieldValue(currentVinInput)) !== recordedValue
+    ) {
+      return;
+    }
+    const parts = readMissingParts();
+    if (parts) {
+      vinSetEntryParts(currentEntryTimestamp, parts);
+    }
+  }, 150);
+}
+
+for (const type of ["click", "change", "input", "keyup"]) {
+  document.addEventListener(type, refreshPartsSoon, true);
 }
 
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
