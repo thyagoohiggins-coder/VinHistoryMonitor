@@ -56,7 +56,9 @@ registro.
   com a quantidade de usos. Ao digitar, um balao abaixo do campo mostra
   reparos parecidos (ignora acentos/maiusculas e tolera erros de digitacao).
   Clique, ou use as setas + Enter, para preencher o campo. O popup lista os
-  reparos aprendidos, permite remover um a um ou apagar o banco.
+  reparos aprendidos, permite remover um a um ou apagar o banco, e tambem
+  permite **ensinar manualmente**: adicionar um reparo, importar uma lista
+  (um por linha) e exportar o banco em `.txt`.
 - Contagem de VINs no historico exibida no popup e como badge no icone da
   extensao.
 

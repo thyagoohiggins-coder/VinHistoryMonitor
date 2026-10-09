@@ -66,6 +66,26 @@ async function repairLearn(rawText) {
   });
 }
 
+// Ensina varios reparos de uma vez (um por linha). Os que ja existem sao
+// mantidos sem alterar a contagem. Retorna quantos eram novos.
+async function repairTeachMany(lines) {
+  let added = 0;
+  await repairMutate((db) => {
+    const now = Date.now();
+    for (const raw of lines) {
+      const text = (raw || "").replace(/\s+/g, " ").trim().slice(0, REPAIR_MAX_TEXT_LENGTH);
+      const key = repairNormalize(text);
+      if (!key || db.some((item) => item.key === key)) {
+        continue;
+      }
+      db.push({ key, text, count: 1, lastUsed: now });
+      added += 1;
+    }
+    return db.slice(0, REPAIR_MAX_ENTRIES);
+  });
+  return added;
+}
+
 function repairDelete(key) {
   return repairMutate((db) => db.filter((item) => item.key !== key));
 }

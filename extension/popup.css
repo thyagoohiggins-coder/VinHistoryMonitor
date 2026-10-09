@@ -380,3 +380,39 @@ h1 {
 .repairs .hidden {
   display: none;
 }
+
+.repair-add {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.repair-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.repair-add button {
+  padding: 5px 8px;
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#repairBulkText {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 5px 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 12px;
+  resize: vertical;
+}

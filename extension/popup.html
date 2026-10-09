@@ -50,9 +50,19 @@
     <section class="repairs">
       <h2 class="section-title">Banco de reparos</h2>
       <p id="repairCount" class="hint"></p>
+      <form id="repairAddForm" class="repair-add">
+        <input id="repairAddInput" type="text" maxlength="300" placeholder="Ensinar novo reparo..." autocomplete="off" />
+        <button type="submit">Adicionar</button>
+      </form>
+      <button id="toggleRepairBulkBtn" class="link-toggle" type="button">Importar lista de reparos</button>
+      <div id="repairBulk" class="hidden">
+        <textarea id="repairBulkText" rows="4" placeholder="Um reparo por linha"></textarea>
+        <button id="repairBulkBtn" class="dedupe-now-btn" type="button">Importar</button>
+      </div>
       <button id="toggleRepairListBtn" class="link-toggle" type="button">Ver reparos aprendidos</button>
       <div id="repairPanel" class="hidden">
         <ul id="repairList" class="repair-list"></ul>
+        <button id="exportRepairsBtn" class="link-toggle" type="button">Exportar reparos (.txt)</button>
         <button id="clearRepairsBtn" class="dedupe-now-btn" type="button">Apagar banco de reparos</button>
       </div>
     </section>

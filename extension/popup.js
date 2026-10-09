@@ -268,6 +268,42 @@ clearRepairsBtn.addEventListener("click", async () => {
   }
 });
 
+const repairAddForm = document.getElementById("repairAddForm");
+const repairAddInput = document.getElementById("repairAddInput");
+const repairBulkEl = document.getElementById("repairBulk");
+const repairBulkText = document.getElementById("repairBulkText");
+
+repairAddForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const added = await repairTeachMany([repairAddInput.value]);
+  if (added === 0 && repairNormalize(repairAddInput.value)) {
+    repairAddInput.select();
+    return;
+  }
+  repairAddInput.value = "";
+});
+
+document.getElementById("toggleRepairBulkBtn").addEventListener("click", () => {
+  repairBulkEl.classList.toggle("hidden");
+});
+
+document.getElementById("repairBulkBtn").addEventListener("click", async () => {
+  const added = await repairTeachMany(repairBulkText.value.split(/\r?\n/));
+  repairBulkText.value = "";
+  repairBulkEl.classList.add("hidden");
+  repairCountEl.textContent = `${added} reparo${added === 1 ? "" : "s"} novo${added === 1 ? "" : "s"} importado${added === 1 ? "" : "s"}.`;
+});
+
+document.getElementById("exportRepairsBtn").addEventListener("click", async () => {
+  const db = await repairGetAll();
+  const blob = new Blob([db.map((item) => item.text).join("\n")], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "reparos.txt";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
 async function load() {
   repairGetAll().then(renderRepairs);
   const [history, settings] = await Promise.all([vinGetHistory(), vinGetSettings()]);
