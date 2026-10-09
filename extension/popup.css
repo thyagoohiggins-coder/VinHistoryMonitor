@@ -432,16 +432,18 @@ h1 {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 12px 14px;
+  padding: 12px;
 }
 
+/* Rodape do proprio popup (altura fixa), abaixo da area com rolagem: nao
+   cobre a barra de rolagem nem o conteudo. */
 .signature {
-  position: fixed;
-  right: 3px;
-  bottom: 1px;
+  flex: none;
+  padding: 2px 12px 3px;
+  text-align: right;
+  border-top: 1px solid #eee;
   font-family: "Segoe Script", "Brush Script MT", cursive;
-  font-size: 6px;
-  line-height: 1;
+  font-size: 7px;
+  line-height: 1.2;
   color: #000;
-  pointer-events: none;
 }

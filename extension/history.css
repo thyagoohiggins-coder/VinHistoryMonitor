@@ -341,10 +341,10 @@ h1 {
 
 .signature {
   position: fixed;
-  right: 3px;
-  bottom: 1px;
+  right: 24px;
+  bottom: 6px;
   font-family: "Segoe Script", "Brush Script MT", cursive;
-  font-size: 6px;
+  font-size: 7px;
   line-height: 1;
   color: #000;
   pointer-events: none;
