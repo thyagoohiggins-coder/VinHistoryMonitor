@@ -1,8 +1,6 @@
 const listContainer = document.getElementById("listContainer");
 const totalCountEl = document.getElementById("totalCount");
 const dupeCountEl = document.getElementById("dupeCount");
-const dedupeNowBtn = document.getElementById("dedupeNowBtn");
-const clearAllBtn = document.getElementById("clearAllBtn");
 const shiftCountsEl = document.getElementById("shiftCounts");
 const purgeInfoEl = document.getElementById("purgeInfo");
 const searchInput = document.getElementById("searchInput");
@@ -158,35 +156,12 @@ function render(history) {
   const redundant = vinCountRedundant(currentHistory);
   dupeCountEl.textContent =
     redundant > 0 ? `${redundant} já lançado${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}` : "";
-  dedupeNowBtn.disabled = redundant === 0;
 
   renderShiftCounts(currentHistory, currentShifts);
   renderList();
 }
 
 searchInput.addEventListener("input", renderList);
-
-dedupeNowBtn.addEventListener("click", async () => {
-  const redundant = vinCountRedundant(currentHistory);
-  if (redundant === 0) {
-    return;
-  }
-
-  const confirmed = confirm(
-    `Remover ${redundant} registro${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}?\n\n` +
-      "De cada VIN já lançado fica apenas o registro mais recente."
-  );
-  if (confirmed) {
-    await vinRemoveDuplicatesNow();
-  }
-});
-
-clearAllBtn.addEventListener("click", async () => {
-  if (!confirm("Apagar todos os VINs da lista? Essa acao nao pode ser desfeita.")) {
-    return;
-  }
-  await vinMutateHistory(() => []);
-});
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") {

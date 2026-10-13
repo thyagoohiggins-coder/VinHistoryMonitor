@@ -44,6 +44,11 @@ async function saveVin(rawValue) {
   const updated = await vinAddEntry(vin, readFormDetails());
   // O registro novo e sempre o primeiro da lista.
   currentEntryTimestamp = updated[0]?.timestamp ?? null;
+
+  if (currentEntryTimestamp !== null) {
+    const details = readFormDetails();
+    vinStatsUpsert(currentEntryTimestamp, { vin, model: details.model, color: details.color });
+  }
 }
 
 // Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
@@ -65,6 +70,7 @@ function refreshPartsSoon() {
     const details = readFormDetails();
     if (Object.keys(details).length > 0) {
       vinSetEntryDetails(currentEntryTimestamp, details);
+      vinStatsUpsert(currentEntryTimestamp, { model: details.model, color: details.color });
     }
   }, 150);
 }

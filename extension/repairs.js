@@ -40,7 +40,16 @@ function repairMutate(mutator) {
 
 // Aprende um reparo: se ja existe (comparacao normalizada) aumenta o uso e
 // atualiza a data; senao cria uma entrada nova.
+async function repairIsFrozen() {
+  return (await vinGetSettings()).repairFrozen === true;
+}
+
 async function repairLearn(rawText) {
+  // Banco congelado: nada novo entra (nem o contador de uso muda).
+  if (await repairIsFrozen()) {
+    return null;
+  }
+
   const text = (rawText || "").replace(/\s+/g, " ").trim().slice(0, REPAIR_MAX_TEXT_LENGTH);
   const key = repairNormalize(text);
   if (!key) {
@@ -69,6 +78,10 @@ async function repairLearn(rawText) {
 // Ensina varios reparos de uma vez (um por linha). Os que ja existem sao
 // mantidos sem alterar a contagem. Retorna quantos eram novos.
 async function repairTeachMany(lines) {
+  if (await repairIsFrozen()) {
+    return 0;
+  }
+
   let added = 0;
   await repairMutate((db) => {
     const now = Date.now();

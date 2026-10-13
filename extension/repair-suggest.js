@@ -209,12 +209,19 @@ function learnRepair() {
     repairLearned = "";
     return;
   }
-  // Clicar e sair sem alterar nao conta como um reparo novo.
-  if (text === repairLearned) {
+  // Clicar e sair sem alterar nao conta como um reparo novo. O mesmo texto
+  // num VIN diferente conta (o formulario reinicia a cada envio).
+  const learnedKey = `${currentEntryTimestamp}|${text}`;
+  if (learnedKey === repairLearned) {
     return;
   }
-  repairLearned = text;
+  repairLearned = learnedKey;
   repairLearn(text);
+
+  // O reparo tambem entra nos indicadores, ligado ao VIN atual.
+  if (currentEntryTimestamp !== null) {
+    vinStatsUpsert(currentEntryTimestamp, { repair: text });
+  }
 }
 
 function attachRepairInput(input) {

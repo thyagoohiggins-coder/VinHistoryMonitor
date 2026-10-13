@@ -13,13 +13,13 @@ registro.
 - Salva o valor digitado ao sair do campo, pressionar Enter, trocar de aba ou
   fechar a pagina.
 - **Remocao automatica de duplicatas (opcional, desativada por padrao):** no
-  popup ha um interruptor "Remover VINs duplicados automaticamente". Enquanto
+  as configuracoes tem o interruptor "Remover VINs já lançados repetidos automaticamente". Enquanto
   desativado, todos os VINs digitados ficam no historico, mesmo repetidos.
   Ao ativar, o historico ja gravado tambem e limpo na hora, mantendo apenas o
   registro mais recente de cada VIN; dai em diante, inserir um VIN ja
   existente substitui a entrada antiga.
-- **Remover duplicatas ja registradas:** botao "Remover duplicatas agora" no
-  popup e "Remover duplicatas" na lista, que limpam de uma vez os VINs
+- **Remover duplicatas ja registradas:** botao "Remover repetidos agora" nas
+  configuracoes, que limpa de uma vez os VINs
   repetidos que ja estao gravados, mantendo apenas o registro mais recente de
   cada um. Ambas as telas mostram quantos registros duplicados existem e
   pedem confirmacao antes de apagar; o botao fica desabilitado quando nao ha
@@ -41,7 +41,7 @@ registro.
   (inicio do 1º turno, 06:00) todos os VINs sao apagados; a lista passa a
   conter so o dia de producao atual. A limpeza roda por alarme da extensao e
   tambem ao abrir o navegador, o popup ou a lista (cobre o navegador fechado
-  na virada). Pode ser desligada no popup ("Apagar VINs ao fim do 3º turno").
+  na virada). Pode ser desligada nas configuracoes ("Apagar VINs ao fim do 3º turno").
   Os horarios dos turnos sao fixos (nao ha opcao de edita-los).
 - **Modelo e cor:** ao lado de cada VIN (lista e popup) aparecem etiquetas com
   a opcao marcada nas perguntas "MODELO" e "COR" do formulario, atualizadas
@@ -51,18 +51,32 @@ registro.
   ou todas podem estar marcadas; "Outra" mostra o texto digitado). As opcoes
   sao atualizadas conforme voce marca/desmarca, mesmo depois de o VIN ja ter
   sido registrado. Sem nenhuma marcada aparece "Cripple: nenhum".
-- **Apagar:** cada VIN tem sua lixeira; "Apagar historico geral" (popup) e
-  "Apagar lista" (pagina da lista) removem tudo de uma vez.
+- **Apagar:** cada VIN tem sua lixeira. "Apagar histórico geral" fica nas
+  configuracoes, atras do PIN.
 - **Banco de reparos com sugestoes:** o campo "PRINCIPAL REPARO" e
   monitorado; cada reparo digitado e aprendido (ao sair do campo) e guardado
   com a quantidade de usos. Ao digitar, um balao abaixo do campo mostra
   reparos parecidos (ignora acentos/maiusculas e tolera erros de digitacao).
-  Clique, ou use as setas + Enter, para preencher o campo. O popup lista os
-  reparos aprendidos, permite remover um a um ou apagar o banco, e tambem
-  permite **ensinar manualmente**: adicionar um reparo, importar uma lista
-  (um por linha) e exportar o banco em `.txt`.
-- Contagem de VINs no historico exibida no popup e como badge no icone da
-  extensao.
+  Clique, ou use as setas + Enter, para preencher o campo. As
+  configuracoes listam os reparos aprendidos, permitem remover um a um ou
+  apagar o banco e **ensinar manualmente**: adicionar um reparo, importar uma
+  lista (um por linha) e exportar o banco em `.txt`. O banco pode ser
+  **congelado** (interruptor): congelado, nao aprende nem aceita reparos novos.
+- **Popup enxuto:** icone "FA", botao de configuracoes (engrenagem), "Ver lista
+  de VINs", "Indicadores de reparos" e os VINs recentes. O total e os VINs por
+  turno ficam escondidos atras de "Mostrar resumo".
+- **Configuracoes** (`settings.html`): remover repetidos, limpeza ao fim do 3º
+  turno, banco de reparos (congelar, adicionar, importar/exportar) e a **area
+  protegida por PIN** (padrao `0000`, pode ser alterado ali): "Apagar histórico
+  geral", "Apagar indicadores" e troca de PIN. O PIN e uma trava de interface
+  (guardado como hash local), nao uma protecao contra quem tem acesso ao
+  navegador.
+- **Indicadores** (`stats.html`): modelos com mais reparos (barras divididas
+  pelas cores dos veiculos), reparos mais frequentes (com o modelo onde mais
+  ocorrem) e filtro por periodo (dia de producao, 7 dias, 30 dias, tudo). Os
+  dados ficam num registro proprio que **nao e apagado na virada do dia**; cada
+  VIN conta uma vez (o registro mais recente).
+- Contagem de VINs no historico exibida como badge no icone da extensao.
 
 ## Instalacao (modo desenvolvedor)
 
@@ -88,13 +102,17 @@ extension/
   repairs.js      # Banco de reparos: aprendizado e busca por similaridade
   repair-suggest.js # Balao de sugestoes no campo PRINCIPAL REPARO
   background.js   # Mantem o badge do icone com a contagem de VINs
-  popup.html/js/css   # Popup: configuracoes, historico recente, apagar por dia/geral
+  popup.html/js/css   # Popup enxuto: atalhos e VINs recentes
+  settings.html/js/css # Configuracoes, banco de reparos e area com PIN
+  stats.html/js/css   # Indicadores de reparos por modelo/cor
   history.html/js/css # Pagina com a lista de VINs por turno
 ```
 
 O historico e armazenado localmente via `chrome.storage.local`:
 
 - `vinHistory`: lista de objetos `{ vin, timestamp, model?, color?, parts? }`.
-- `vinSettings`: `{ dedupeEnabled: boolean, autoPurgeEnabled: boolean, shifts: [{ id, label, start, end }] }`
+- `vinStats`: `{ ts, vin, model, color, repair }` por VIN (indicadores, permanente).
+- `vinPinHash`: hash do PIN (padrao 0000 quando ausente).
+- `vinSettings`: `{ dedupeEnabled: boolean, autoPurgeEnabled: boolean, repairFrozen: boolean, shifts: [{ id, label, start, end }] }`
   (`dedupeEnabled` padrao `false`; `shifts` com os tres turnos padrao).
 - `repairDb`: lista de `{ key, text, count, lastUsed }` (reparos aprendidos).

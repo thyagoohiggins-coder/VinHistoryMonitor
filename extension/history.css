@@ -349,3 +349,19 @@ h1 {
   color: #000;
   pointer-events: none;
 }
+
+.page-nav {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.page-nav a {
+  color: #0b5cab;
+  text-decoration: none;
+}
+
+.page-nav a.current {
+  font-weight: 700;
+  color: #1f1f1f;
+}

@@ -3,6 +3,12 @@
 
 const VIN_STORAGE_KEY = "vinHistory";
 const VIN_SETTINGS_KEY = "vinSettings";
+// Registro permanente (nao e apagado na virada do dia) usado nos indicadores:
+// { ts, vin, model, color, repair } por VIN lancado.
+const VIN_STATS_KEY = "vinStats";
+const VIN_STATS_MAX = 20000;
+const VIN_PIN_KEY = "vinPinHash";
+const VIN_DEFAULT_PIN = "0000";
 // Horarios FIXOS dos turnos (nao sao configuraveis).
 const VIN_DEFAULT_SHIFTS = [
   { id: "t1", label: "1º turno", start: "06:00", end: "15:48" },
@@ -17,6 +23,8 @@ const VIN_DEFAULT_SETTINGS = {
   // Apaga os VINs quando o dia de producao termina (fim do 3º turno, que e
   // quando o 1º turno recomeca).
   autoPurgeEnabled: true,
+  // Banco de reparos congelado: nao aprende nem aceita reparos novos.
+  repairFrozen: false,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -60,9 +68,12 @@ async function vinSetHistory(history) {
 // Remove uma unica entrada do historico pelo timestamp (identificador
 // unico de cada registro).
 async function vinDeleteEntry(timestamp) {
-  return vinMutateHistory((history) =>
+  const updated = await vinMutateHistory((history) =>
     history.filter((entry) => entry.timestamp !== timestamp)
   );
+  // Um VIN apagado a mao (ex.: digitado errado) tambem sai dos indicadores.
+  await vinStatsDelete(timestamp);
+  return updated;
 }
 
 // Fila de escrita: chrome.storage e assincrono, entao duas alteracoes
@@ -349,4 +360,75 @@ function vinBuildModelColorBadges(entry) {
     box.appendChild(badge);
   });
   return box;
+}
+
+// ---------------------------------------------------------------------------
+// Indicadores (registro permanente por VIN)
+// ---------------------------------------------------------------------------
+
+async function vinStatsGetAll() {
+  const { [VIN_STATS_KEY]: stats = [] } = await chrome.storage.local.get(VIN_STATS_KEY);
+  return Array.isArray(stats) ? stats : [];
+}
+
+let vinStatsQueue = Promise.resolve();
+
+function vinStatsMutate(mutator) {
+  const result = vinStatsQueue.then(async () => {
+    const updated = mutator(await vinStatsGetAll());
+    await chrome.storage.local.set({ [VIN_STATS_KEY]: updated });
+    return updated;
+  });
+  vinStatsQueue = result.catch(() => {});
+  return result;
+}
+
+// Cria ou atualiza o registro do VIN identificado por `ts`; so grava os
+// campos informados (undefined/null mantem o valor anterior).
+function vinStatsUpsert(ts, patch) {
+  const clean = {};
+  for (const [key, value] of Object.entries(patch || {})) {
+    if (value !== undefined && value !== null) {
+      clean[key] = value;
+    }
+  }
+
+  return vinStatsMutate((stats) => {
+    const index = stats.findIndex((item) => item.ts === ts);
+    if (index === -1) {
+      stats.push({ ts, ...clean });
+      return stats.length > VIN_STATS_MAX ? stats.slice(-VIN_STATS_MAX) : stats;
+    }
+    stats[index] = { ...stats[index], ...clean };
+    return stats;
+  });
+}
+
+function vinStatsDelete(ts) {
+  return vinStatsMutate((stats) => stats.filter((item) => item.ts !== ts));
+}
+
+function vinStatsClear() {
+  return vinStatsMutate(() => []);
+}
+
+// ---------------------------------------------------------------------------
+// PIN das acoes protegidas (padrao 0000). E uma trava de interface, nao
+// criptografia: serve para evitar cliques acidentais de outras pessoas.
+// ---------------------------------------------------------------------------
+
+async function vinHashPin(pin) {
+  const bytes = new TextEncoder().encode(`vin-monitor:${pin}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function vinCheckPin(pin) {
+  const { [VIN_PIN_KEY]: stored } = await chrome.storage.local.get(VIN_PIN_KEY);
+  const expected = stored || (await vinHashPin(VIN_DEFAULT_PIN));
+  return (await vinHashPin(String(pin))) === expected;
+}
+
+async function vinSetPin(newPin) {
+  await chrome.storage.local.set({ [VIN_PIN_KEY]: await vinHashPin(String(newPin)) });
 }

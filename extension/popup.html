@@ -7,83 +7,39 @@
   </head>
   <body>
     <div class="popup-scroll">
-    <div class="brand-card">
-      <span class="brand-title">Reparo FA</span>
-      <span class="brand-sub">Controle de VINs</span>
-    </div>
-
-    <div id="stats" class="stats">
-      <span id="countNumber" class="count-number">0</span>
-      <span id="countLabel" class="count-label">VINs registrados</span>
-    </div>
-
-    <section class="shifts">
-      <h2 class="section-title">VINs por turno</h2>
-      <ul id="shiftCounts" class="shift-counts"></ul>
-    </section>
-
-    <section class="settings">
-      <label class="switch-row">
-        <span>Remover VINs ja lancados repetidos automaticamente</span>
-        <input type="checkbox" id="dedupeToggle" />
-      </label>
-      <p class="hint">
-        Desativado por padrao: todos os VINs ficam no historico, mesmo os
-        repetidos (marcados como “Já lançado” abaixo). Ao ativar, o historico ja existente
-        tambem e limpo, mantendo so o registro mais recente de cada VIN.
-      </p>
-      <label class="switch-row">
-        <span>Apagar VINs ao fim do 3º turno</span>
-        <input type="checkbox" id="purgeToggle" />
-      </label>
-      <p class="hint">
-        Todos os VINs sao apagados automaticamente quando o 3º turno termina
-        (inicio do 1º turno, 06:00 por padrao).
-      </p>
-      <p id="dupeStatus" class="dupe-status"></p>
-      <button id="dedupeNowBtn" class="dedupe-now-btn">Remover repetidos agora</button>
-    </section>
-
-    <section class="repairs">
-      <h2 class="section-title">Banco de reparos</h2>
-      <p id="repairCount" class="hint"></p>
-      <form id="repairAddForm" class="repair-add">
-        <input id="repairAddInput" type="text" maxlength="300" placeholder="Ensinar novo reparo..." autocomplete="off" />
-        <button type="submit">Adicionar</button>
-      </form>
-      <button id="toggleRepairBulkBtn" class="link-toggle" type="button">Importar lista de reparos</button>
-      <div id="repairBulk" class="hidden">
-        <textarea id="repairBulkText" rows="4" placeholder="Um reparo por linha"></textarea>
-        <button id="repairBulkBtn" class="dedupe-now-btn" type="button">Importar</button>
+      <div class="top-row">
+        <div class="brand-card">
+          <span class="brand-title">Reparo FA</span>
+          <span class="brand-sub">Controle de VINs</span>
+        </div>
+        <button id="openSettingsBtn" class="icon-btn" type="button" title="Configuracoes" aria-label="Configuracoes">&#9881;</button>
       </div>
-      <button id="toggleRepairListBtn" class="link-toggle" type="button">Ver reparos aprendidos</button>
-      <div id="repairPanel" class="hidden">
-        <ul id="repairList" class="repair-list"></ul>
-        <button id="exportRepairsBtn" class="link-toggle" type="button">Exportar reparos (.txt)</button>
-        <button id="clearRepairsBtn" class="dedupe-now-btn" type="button">Apagar banco de reparos</button>
+
+      <section class="actions">
+        <button id="openListBtn" type="button">Ver lista de VINs</button>
+        <button id="openStatsBtn" class="secondary-btn" type="button">Indicadores de reparos</button>
+      </section>
+
+      <button id="toggleSummaryBtn" class="link-toggle" type="button">Mostrar resumo</button>
+      <div id="summary" class="summary hidden">
+        <div class="stats">
+          <span id="countNumber" class="count-number">0</span>
+          <span id="countLabel" class="count-label">VINs registrados</span>
+        </div>
+        <h2 class="section-title">VINs por turno</h2>
+        <ul id="shiftCounts" class="shift-counts"></ul>
       </div>
-    </section>
 
-    <section class="actions">
-      <button id="openCalendarBtn">Ver lista de VINs</button>
-    </section>
+      <ul id="historyList" class="history-list"></ul>
 
-    <ul id="historyList" class="history-list"></ul>
-
-    <p id="emptyState" class="empty-state">
-      Nenhum VIN registrado ainda. Preencha o campo VIN no formulario para comecar.
-    </p>
-
-    <button id="clearBtn" class="clear-all-btn" title="Apagar todo o historico">
-      Apagar historico geral
-    </button>
-
+      <p id="emptyState" class="empty-state">
+        Nenhum VIN registrado ainda. Preencha o campo VIN no formulario para comecar.
+      </p>
     </div>
 
     <div class="signature">Hikins</div>
 
     <script src="storage.js"></script>
-    <script src="repairs.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
