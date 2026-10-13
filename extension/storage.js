@@ -188,7 +188,14 @@ async function vinPurgeExpired() {
   if (!settings.autoPurgeEnabled) {
     return vinGetHistory();
   }
-  return vinMutateHistory((history) => vinDropExpired(history, settings.shifts));
+
+  // So grava quando ha algo vencido (evita escritas e eventos desnecessarios).
+  const history = await vinGetHistory();
+  const kept = vinDropExpired(history, settings.shifts);
+  if (kept.length === history.length) {
+    return history;
+  }
+  return vinMutateHistory((current) => vinDropExpired(current, settings.shifts));
 }
 
 // Atualiza modelo, cor e pecas faltantes de um registro ja gravado.
@@ -431,4 +438,24 @@ async function vinCheckPin(pin) {
 
 async function vinSetPin(newPin) {
   await chrome.storage.local.set({ [VIN_PIN_KEY]: await vinHashPin(String(newPin)) });
+}
+
+// Linha "Reparo: ..." com o principal reparo digitado para o VIN.
+function vinBuildRepairRow(entry) {
+  if (!entry.repair) {
+    return null;
+  }
+  const row = document.createElement("div");
+  row.className = "repair-row";
+
+  const label = document.createElement("span");
+  label.className = "repair-label";
+  label.textContent = "Reparo:";
+
+  const text = document.createElement("span");
+  text.className = "repair-value";
+  text.textContent = entry.repair;
+
+  row.append(label, text);
+  return row;
 }

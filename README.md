@@ -46,6 +46,10 @@ registro.
 - **Modelo e cor:** ao lado de cada VIN (lista e popup) aparecem etiquetas com
   a opcao marcada nas perguntas "MODELO" e "COR" do formulario, atualizadas
   se voce trocar a resposta depois de o VIN ja ter sido registrado.
+- **Principal reparo junto do VIN:** o texto do campo "PRINCIPAL REPARO" fica
+  gravado no registro do VIN (aparece como "Reparo: ..." na lista e no popup),
+  e e apagado junto com ele na limpeza ao fim do 3º turno. Tambem entra nos
+  indicadores, que sao permanentes.
 - **Cripple (PEÇAS FALTANTES):** a lista (e o popup) mostram, na frente de cada
   VIN, as opcoes marcadas na pergunta "PEÇAS FALTANTES" do formulario (varias
   ou todas podem estar marcadas; "Outra" mostra o texto digitado). As opcoes
@@ -76,7 +80,7 @@ registro.
   ocorrem) e filtro por periodo (dia de producao, 7 dias, 30 dias, tudo). Os
   dados ficam num registro proprio que **nao e apagado na virada do dia**; cada
   VIN conta uma vez (o registro mais recente).
-- Contagem de VINs no historico exibida como badge no icone da extensao.
+- O icone da extensao e "FA" em fundo preto, sem numero de contagem.
 
 ## Instalacao (modo desenvolvedor)
 
@@ -101,7 +105,7 @@ extension/
   content.js      # Detecta o campo VIN e grava o historico
   repairs.js      # Banco de reparos: aprendizado e busca por similaridade
   repair-suggest.js # Balao de sugestoes no campo PRINCIPAL REPARO
-  background.js   # Mantem o badge do icone com a contagem de VINs
+  background.js   # Alarme da limpeza diaria dos VINs (fim do 3º turno)
   popup.html/js/css   # Popup enxuto: atalhos e VINs recentes
   settings.html/js/css # Configuracoes, banco de reparos e area com PIN
   stats.html/js/css   # Indicadores de reparos por modelo/cor
@@ -110,7 +114,7 @@ extension/
 
 O historico e armazenado localmente via `chrome.storage.local`:
 
-- `vinHistory`: lista de objetos `{ vin, timestamp, model?, color?, parts? }`.
+- `vinHistory`: lista de objetos `{ vin, timestamp, model?, color?, repair?, parts? }`.
 - `vinStats`: `{ ts, vin, model, color, repair }` por VIN (indicadores, permanente).
 - `vinPinHash`: hash do PIN (padrao 0000 quando ausente).
 - `vinSettings`: `{ dedupeEnabled: boolean, autoPurgeEnabled: boolean, repairFrozen: boolean, shifts: [{ id, label, start, end }] }`

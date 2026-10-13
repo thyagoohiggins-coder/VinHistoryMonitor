@@ -365,3 +365,21 @@ h1 {
   font-weight: 700;
   color: #1f1f1f;
 }
+
+.repair-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-basis: 100%;
+  font-size: 12px;
+  color: #333;
+}
+
+.repair-label {
+  font-weight: 700;
+  color: #0b5a2e;
+}
+
+.repair-value {
+  word-break: break-word;
+}

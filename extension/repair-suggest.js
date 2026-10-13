@@ -200,6 +200,14 @@ function updateRepairSuggestions() {
   renderRepairBox();
 }
 
+// Texto atual do campo de reparo ("" se nao ha campo ou esta vazio).
+function getCurrentRepairText() {
+  if (!repairInput || !repairInput.isConnected) {
+    return "";
+  }
+  return getFieldValue(repairInput).replace(/\s+/g, " ").trim();
+}
+
 function learnRepair() {
   if (!repairInput) {
     return;
@@ -218,8 +226,9 @@ function learnRepair() {
   repairLearned = learnedKey;
   repairLearn(text);
 
-  // O reparo tambem entra nos indicadores, ligado ao VIN atual.
+  // O reparo fica junto do VIN (lista) e tambem entra nos indicadores.
   if (currentEntryTimestamp !== null) {
+    vinSetEntryDetails(currentEntryTimestamp, { repair: text });
     vinStatsUpsert(currentEntryTimestamp, { repair: text });
   }
 }

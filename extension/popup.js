@@ -115,6 +115,11 @@ function render(history) {
 
     li.appendChild(vinRow);
     li.appendChild(timeEl);
+    const repairRow = vinBuildRepairRow(entry);
+    if (repairRow) {
+      li.appendChild(repairRow);
+    }
+
     const partsRow = vinBuildPartsRow(entry);
     if (partsRow) {
       li.appendChild(partsRow);

@@ -41,13 +41,23 @@ async function saveVin(rawValue) {
 
   recordedValue = vin;
 
-  const updated = await vinAddEntry(vin, readFormDetails());
+  const details = readFormDetails();
+  // Reparo ja digitado antes do VIN ser registrado entra junto.
+  const repair = typeof getCurrentRepairText === "function" ? getCurrentRepairText() : "";
+  if (repair) {
+    details.repair = repair;
+  }
+  const updated = await vinAddEntry(vin, details);
   // O registro novo e sempre o primeiro da lista.
   currentEntryTimestamp = updated[0]?.timestamp ?? null;
 
   if (currentEntryTimestamp !== null) {
-    const details = readFormDetails();
-    vinStatsUpsert(currentEntryTimestamp, { vin, model: details.model, color: details.color });
+    vinStatsUpsert(currentEntryTimestamp, {
+      vin,
+      model: details.model,
+      color: details.color,
+      repair: details.repair,
+    });
   }
 }
 
