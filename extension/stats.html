@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Indicadores de reparos</title>
+    <link rel="stylesheet" href="history.css" />
+    <link rel="stylesheet" href="stats.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="brand-card">
+        <span class="brand-title">Reparo FA</span>
+        <span class="brand-sub">Controle de VINs</span>
+      </div>
+      <h1>Indicadores de reparos</h1>
+      <nav class="page-nav">
+        <a href="history.html">Lista de VINs</a>
+        <a href="stats.html" class="current">Indicadores</a>
+        <a href="settings.html">Configuracoes</a>
+      </nav>
+    </header>
+
+    <div class="toolbar">
+      <label for="periodSelect">Periodo:</label>
+      <select id="periodSelect">
+        <option value="today">Dia de producao atual</option>
+        <option value="7">Ultimos 7 dias</option>
+        <option value="30">Ultimos 30 dias</option>
+        <option value="all" selected>Tudo</option>
+      </select>
+    </div>
+
+    <section id="kpis" class="kpis"></section>
+
+    <section class="card">
+      <h2 class="section-title">Modelos com mais reparos</h2>
+      <div id="modelBars"></div>
+      <div id="colorLegend" class="color-legend"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Reparos mais frequentes</h2>
+      <div id="repairBars"></div>
+    </section>
+
+    <p class="shift-hint">
+      Cada VIN conta uma vez (o registro mais recente). Os indicadores nao sao apagados na virada do dia;
+      so pelo PIN nas configuracoes.
+    </p>
+
+    <div class="signature">Hikins</div>
+
+    <script src="storage.js"></script>
+    <script src="repairs.js"></script>
+    <script src="stats.js"></script>
+  </body>
+</html>

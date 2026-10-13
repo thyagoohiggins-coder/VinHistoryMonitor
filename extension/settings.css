@@ -1,0 +1,157 @@
+body {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+
+.card.protected {
+  border-color: #e4b4b0;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.switch-row input[type="checkbox"] {
+  width: 36px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.hint {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  color: #777;
+  line-height: 1.4;
+}
+
+.dupe-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a6b00;
+  margin: 4px 0 8px;
+}
+
+.repair-add,
+.pin-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.repair-add input,
+.pin-row input {
+  flex: 1;
+  max-width: 340px;
+  padding: 7px 10px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.repair-add button,
+.pin-row button {
+  padding: 7px 14px;
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.repair-add button:disabled,
+.repair-add input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bulk {
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.bulk summary {
+  cursor: pointer;
+  color: #0b5cab;
+}
+
+.bulk textarea {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 7px 10px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.repair-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.repair-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+
+.repair-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.repair-uses {
+  color: #666;
+  font-size: 12px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.protected-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.protected-actions[hidden] {
+  display: none;
+}
+
+.pin-message {
+  min-height: 16px;
+  margin: 2px 0;
+  font-size: 12px;
+  color: #d0392f;
+}
+
+.pin-message.ok {
+  color: #0b8043;
+}

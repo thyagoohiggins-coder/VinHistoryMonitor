@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Configuracoes</title>
+    <link rel="stylesheet" href="history.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="brand-card">
+        <span class="brand-title">Reparo FA</span>
+        <span class="brand-sub">Controle de VINs</span>
+      </div>
+      <h1>Configuracoes</h1>
+      <nav class="page-nav">
+        <a href="history.html">Lista de VINs</a>
+        <a href="stats.html">Indicadores</a>
+        <a href="settings.html" class="current">Configuracoes</a>
+      </nav>
+    </header>
+
+    <section class="card">
+      <h2 class="section-title">VINs</h2>
+      <label class="switch-row">
+        <span>Remover VINs já lançados repetidos automaticamente</span>
+        <input type="checkbox" id="dedupeToggle" />
+      </label>
+      <p class="hint">
+        Desativado: todos os VINs ficam na lista, mesmo os repetidos (marcados como “Já lançado”).
+        Ao ativar, a lista atual tambem e limpa, mantendo so o registro mais recente de cada VIN.
+      </p>
+      <label class="switch-row">
+        <span>Apagar VINs ao fim do 3º turno</span>
+        <input type="checkbox" id="purgeToggle" />
+      </label>
+      <p class="hint">Todos os VINs sao apagados quando o 3º turno termina (06:00). Os indicadores nao sao afetados.</p>
+      <p id="dupeStatus" class="dupe-status"></p>
+      <button id="dedupeNowBtn" class="warn-btn" type="button">Remover repetidos agora</button>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Banco de reparos</h2>
+      <label class="switch-row">
+        <span>Congelar banco de reparos</span>
+        <input type="checkbox" id="freezeToggle" />
+      </label>
+      <p class="hint">
+        Congelado: o banco nao aprende reparos novos e nao aceita adicionar outros
+        (as sugestoes continuam funcionando com o que ja existe).
+      </p>
+      <p id="repairCount" class="hint"></p>
+      <form id="repairAddForm" class="repair-add">
+        <input id="repairAddInput" type="text" maxlength="300" placeholder="Ensinar novo reparo..." autocomplete="off" />
+        <button type="submit" id="repairAddBtn">Adicionar</button>
+      </form>
+      <details class="bulk">
+        <summary>Importar lista de reparos</summary>
+        <textarea id="repairBulkText" rows="5" placeholder="Um reparo por linha"></textarea>
+        <button id="repairBulkBtn" class="warn-btn" type="button">Importar</button>
+      </details>
+      <details class="bulk">
+        <summary>Ver reparos aprendidos</summary>
+        <ul id="repairList" class="repair-list"></ul>
+        <div class="row-actions">
+          <button id="exportRepairsBtn" class="link-btn" type="button">Exportar reparos (.txt)</button>
+          <button id="clearRepairsBtn" class="warn-btn" type="button">Apagar banco de reparos</button>
+        </div>
+      </details>
+    </section>
+
+    <section class="card protected">
+      <h2 class="section-title">Area protegida (PIN)</h2>
+      <p class="hint">As acoes abaixo ficam bloqueadas ate digitar o PIN.</p>
+
+      <form id="unlockForm" class="pin-row">
+        <input id="pinInput" type="password" inputmode="numeric" maxlength="12" placeholder="PIN" autocomplete="off" />
+        <button type="submit">Desbloquear</button>
+      </form>
+      <p id="pinMessage" class="pin-message"></p>
+
+      <div id="protectedActions" class="protected-actions" hidden>
+        <button id="clearHistoryBtn" class="danger-btn" type="button">Apagar histórico geral (lista de VINs)</button>
+        <button id="clearStatsBtn" class="danger-btn" type="button">Apagar indicadores</button>
+        <form id="changePinForm" class="pin-row">
+          <input id="newPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="Novo PIN (4 a 12 digitos)" autocomplete="off" />
+          <button type="submit">Alterar PIN</button>
+        </form>
+        <button id="lockBtn" class="link-btn" type="button">Bloquear novamente</button>
+      </div>
+    </section>
+
+    <div class="signature">Hikins</div>
+
+    <script src="storage.js"></script>
+    <script src="repairs.js"></script>
+    <script src="settings.js"></script>
+  </body>
+</html>

@@ -18,18 +18,54 @@ BRANCO = (255, 255, 255)
 RAIO = 0.22                # canto arredondado, fracao do lado
 SUPERSAMPLE = 8
 
-# Faixa ocupada pelo "codigo de barras" dentro do quadrado. As fracoes sao
-# escolhidas para cair exatamente na grade de pixels em todos os tamanhos
-# gerados (3/16, 13/16, 1/4, 3/4); sem isso a ultima barra fica a meio pixel
-# e sai borrada a 16px.
-BARRAS_X0, BARRAS_X1 = 0.1875, 0.8125
-BARRAS_Y0, BARRAS_Y1 = 0.25, 0.75
+# Letras "F" e "A" desenhadas com retangulos e paralelogramos em coordenadas
+# normalizadas (0..1). Os tracos sao grossos para continuarem legiveis a 16px.
+LETRAS_Y0, LETRAS_Y1 = 0.25, 0.75
 
-# (e_barra, peso) - larguras irregulares para que o desenho seja lido como
-# codigo de barras, e nao como um menu. Os pesos somam 10, e a faixa mede
-# 10px a 16px, entao cada unidade vale exatamente 1px (2px a 32, 3px a 48,
-# 8px a 128) e todas as barras saem nitidas.
-SEGMENTOS = [(1, 3), (0, 1), (1, 1), (0, 1), (1, 2), (0, 1), (1, 1)]
+# F: (x0, y0, x1, y1) de cada retangulo.
+RETANGULOS_F = [
+    (0.1250, 0.25, 0.2500, 0.75),   # haste
+    (0.1250, 0.25, 0.4375, 0.35),   # barra de cima
+    (0.1250, 0.45, 0.3750, 0.55),   # barra do meio
+]
+
+# A: pernas inclinadas (paralelogramos) + travessa.
+ESPESSURA_PERNA = 0.10
+A_TOPO = (0.6000, 0.7600)           # x inicial/final do topo (ponta)
+A_BASE_ESQ = 0.4600                 # x inicial da base da perna esquerda
+A_BASE_DIR = 0.8000                 # x inicial da base da perna direita
+TRAVESSA_Y = (0.56, 0.64)
+
+
+def no_retangulo(x, y, ret):
+    x0, y0, x1, y1 = ret
+    return x0 <= x < x1 and y0 <= y < y1
+
+
+def na_perna(x, y, topo_x0, base_x0):
+    """Paralelogramo entre o topo (y=0.25) e a base (y=0.75)."""
+    if not LETRAS_Y0 <= y < LETRAS_Y1:
+        return False
+    t = (y - LETRAS_Y0) / (LETRAS_Y1 - LETRAS_Y0)
+    x0 = topo_x0 + (base_x0 - topo_x0) * t
+    return x0 <= x < x0 + ESPESSURA_PERNA
+
+
+def na_letra(x, y):
+    if any(no_retangulo(x, y, ret) for ret in RETANGULOS_F):
+        return True
+    topo_esq = A_TOPO[0]
+    topo_dir = A_TOPO[1] - ESPESSURA_PERNA
+    if na_perna(x, y, topo_esq, A_BASE_ESQ) or na_perna(x, y, topo_dir, A_BASE_DIR):
+        return True
+    if TRAVESSA_Y[0] <= y < TRAVESSA_Y[1]:
+        # A travessa vai de uma perna a outra, sem passar do contorno.
+        t = (y - LETRAS_Y0) / (LETRAS_Y1 - LETRAS_Y0)
+        esq = topo_esq + (A_BASE_ESQ - topo_esq) * t
+        dir_ = topo_dir + (A_BASE_DIR - topo_dir) * t + ESPESSURA_PERNA
+        return esq <= x < dir_
+    return False
+
 
 TAMANHOS = [16, 32, 48, 128]
 
@@ -42,45 +78,26 @@ def dentro_do_quadrado_arredondado(x, y, raio):
     return dx * dx + dy * dy <= raio * raio
 
 
-def faixas_das_barras():
-    """Converte SEGMENTOS em intervalos [inicio, fim] normalizados."""
-    total = sum(peso for _, peso in SEGMENTOS)
-    largura = BARRAS_X1 - BARRAS_X0
-
-    faixas = []
-    cursor = 0
-    for e_barra, peso in SEGMENTOS:
-        inicio = BARRAS_X0 + (cursor / total) * largura
-        fim = BARRAS_X0 + ((cursor + peso) / total) * largura
-        if e_barra:
-            faixas.append((inicio, fim))
-        cursor += peso
-    return faixas
-
-
-def cor_do_ponto(x, y, faixas):
+def cor_do_ponto(x, y):
     """Retorna (r, g, b, a) do ponto normalizado (x, y)."""
     if not dentro_do_quadrado_arredondado(x, y, RAIO):
         return (0, 0, 0, 0)
 
-    if BARRAS_Y0 <= y <= BARRAS_Y1:
-        for inicio, fim in faixas:
-            if inicio <= x < fim:
-                return BRANCO + (255,)
+    if na_letra(x, y):
+        return BRANCO + (255,)
 
     return VERDE + (255,)
 
 
 def renderiza(tamanho):
     """Desenha em SUPERSAMPLE vezes o tamanho e reduz por media."""
-    faixas = faixas_das_barras()
     grande = tamanho * SUPERSAMPLE
 
     # Amostra a imagem ampliada uma unica vez.
     amostras = []
     for py in range(grande):
         y = (py + 0.5) / grande
-        linha = [cor_do_ponto((px + 0.5) / grande, y, faixas) for px in range(grande)]
+        linha = [cor_do_ponto((px + 0.5) / grande, y) for px in range(grande)]
         amostras.append(linha)
 
     linhas = []

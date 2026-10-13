@@ -6,60 +6,38 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <div class="brand-card">
-      <span class="brand-title">Reparo FA</span>
-      <span class="brand-sub">Controle de VINs</span>
-    </div>
-
-    <div id="stats" class="stats">
-      <span id="countNumber" class="count-number">0</span>
-      <span id="countLabel" class="count-label">VINs registrados</span>
-    </div>
-
-    <section class="shifts">
-      <h2 class="section-title">VINs por turno</h2>
-      <ul id="shiftCounts" class="shift-counts"></ul>
-
-      <button id="toggleShiftCfgBtn" class="link-toggle" type="button">
-        Definir horarios dos turnos
-      </button>
-
-      <div id="shiftConfig" class="shift-config hidden">
-        <div id="shiftRows"></div>
-        <p id="shiftWarning" class="shift-warning"></p>
-        <button id="resetShiftsBtn" class="link-toggle" type="button">
-          Restaurar horarios padrao
-        </button>
+    <div class="popup-scroll">
+      <div class="top-row">
+        <div class="brand-card">
+          <span class="brand-title">Reparo FA</span>
+          <span class="brand-sub">Controle de VINs</span>
+        </div>
+        <button id="openSettingsBtn" class="icon-btn" type="button" title="Configuracoes" aria-label="Configuracoes">&#9881;</button>
       </div>
-    </section>
 
-    <section class="settings">
-      <label class="switch-row">
-        <span>Remover VINs duplicados automaticamente</span>
-        <input type="checkbox" id="dedupeToggle" />
-      </label>
-      <p class="hint">
-        Desativado por padrao: todos os VINs ficam no historico, mesmo os
-        repetidos (destacados abaixo). Ao ativar, o historico ja existente
-        tambem e limpo, mantendo so o registro mais recente de cada VIN.
+      <section class="actions">
+        <button id="openListBtn" type="button">Ver lista de VINs</button>
+        <button id="openStatsBtn" class="secondary-btn" type="button">Indicadores de reparos</button>
+      </section>
+
+      <button id="toggleSummaryBtn" class="link-toggle" type="button">Mostrar resumo</button>
+      <div id="summary" class="summary hidden">
+        <div class="stats">
+          <span id="countNumber" class="count-number">0</span>
+          <span id="countLabel" class="count-label">VINs registrados</span>
+        </div>
+        <h2 class="section-title">VINs por turno</h2>
+        <ul id="shiftCounts" class="shift-counts"></ul>
+      </div>
+
+      <ul id="historyList" class="history-list"></ul>
+
+      <p id="emptyState" class="empty-state">
+        Nenhum VIN registrado ainda. Preencha o campo VIN no formulario para comecar.
       </p>
-      <p id="dupeStatus" class="dupe-status"></p>
-      <button id="dedupeNowBtn" class="dedupe-now-btn">Remover duplicatas agora</button>
-    </section>
+    </div>
 
-    <section class="actions">
-      <button id="openCalendarBtn">Ver calendario 2026/2027</button>
-    </section>
-
-    <ul id="historyList" class="history-list"></ul>
-
-    <p id="emptyState" class="empty-state">
-      Nenhum VIN registrado ainda. Preencha o campo VIN no formulario para comecar.
-    </p>
-
-    <button id="clearBtn" class="clear-all-btn" title="Apagar todo o historico">
-      Apagar historico geral
-    </button>
+    <div class="signature">Hikins</div>
 
     <script src="storage.js"></script>
     <script src="popup.js"></script>
