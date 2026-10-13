@@ -50,6 +50,7 @@ async function saveVin(rawValue) {
   const updated = await vinAddEntry(vin, details);
   // O registro novo e sempre o primeiro da lista.
   currentEntryTimestamp = updated[0]?.timestamp ?? null;
+  lastAnnouncedParts = (details.parts || []).join("|");
 
   if (currentEntryTimestamp !== null) {
     vinStatsUpsert(currentEntryTimestamp, {
@@ -63,22 +64,44 @@ async function saveVin(rawValue) {
 
 // Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
 // clicar numa caixa, atualiza o registro do VIN atual.
+// Aviso rapido na tela quando as pecas faltantes mudam: confirma que a
+// extensao viu a marcacao (ou a retirada) de uma opcao.
+let lastAnnouncedParts = null;
+function announceParts(parts) {
+  if (!parts) {
+    return;
+  }
+  const key = parts.join("|");
+  if (lastAnnouncedParts !== null && key !== lastAnnouncedParts) {
+    const toast = document.createElement("div");
+    toast.textContent = parts.length === 0 ? "Cripple: nenhuma peça" : `Cripple atualizado (${parts.length})`;
+    toast.style.cssText =
+      "position:fixed;right:12px;bottom:12px;z-index:2147483647;background:#111;color:#fff;" +
+      "padding:5px 10px;border-radius:6px;font:12px system-ui,sans-serif;opacity:.9;";
+    document.documentElement.appendChild(toast);
+    setTimeout(() => toast.remove(), 1800);
+  }
+  lastAnnouncedParts = key;
+}
+
 let partsRefreshTimer = null;
 function refreshPartsSoon() {
   clearTimeout(partsRefreshTimer);
   partsRefreshTimer = setTimeout(() => {
-    // So atualiza enquanto o campo ainda mostra o VIN gravado: depois do
-    // envio o formulario volta zerado e apagaria as pecas ja registradas.
+    // So atualiza enquanto existe um VIN preenchido na tela: depois do envio o
+    // formulario volta vazio (o registro atual e liberado) e nao pode apagar
+    // as pecas ja registradas.
     if (
       currentEntryTimestamp === null ||
       !currentVinInput ||
       !currentVinInput.isConnected ||
-      vinNormalize(getFieldValue(currentVinInput)) !== recordedValue
+      !vinNormalize(getFieldValue(currentVinInput))
     ) {
       return;
     }
     const details = readFormDetails();
     if (Object.keys(details).length > 0) {
+      announceParts(details.parts);
       vinSetEntryDetails(currentEntryTimestamp, details);
       vinStatsUpsert(currentEntryTimestamp, { model: details.model, color: details.color });
     }

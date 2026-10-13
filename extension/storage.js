@@ -564,7 +564,7 @@ function vinDecorateRepeats(container) {
     const line = document.createElement("div");
     line.className = "repeat-line";
     line.style.cssText =
-      `position:absolute;width:3px;border-radius:2px;left:${x + 3}px;top:${Math.min(...centers)}px;` +
+      `position:absolute;width:1px;left:${x + 2}px;top:${Math.min(...centers)}px;` +
       `height:${Math.max(...centers) - Math.min(...centers)}px;background:${group.color};`;
     container.appendChild(line);
 
@@ -572,8 +572,8 @@ function vinDecorateRepeats(container) {
       const dot = document.createElement("div");
       dot.className = "repeat-dot";
       dot.style.cssText =
-        `position:absolute;width:9px;height:9px;border-radius:50%;left:${x}px;top:${y - 4.5}px;` +
-        `background:${group.color};border:2px solid #fff;box-sizing:content-box;margin:-2px 0 0 -2px;`;
+        `position:absolute;width:5px;height:5px;border-radius:50%;left:${x}px;top:${y - 2.5}px;` +
+        `background:${group.color};box-sizing:content-box;`;
       container.appendChild(dot);
     }
   }

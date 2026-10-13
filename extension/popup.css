@@ -168,9 +168,9 @@ h1 {
   display: flex;
   flex-direction: column;
   padding: 8px 10px;
-  border: 1px solid #ececec;
-  border-radius: 8px;
-  margin-bottom: 6px;
+  border: 1px solid #6b7280;
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
 
 .history-item.duplicate-entry {
