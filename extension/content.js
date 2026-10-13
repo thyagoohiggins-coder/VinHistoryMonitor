@@ -51,6 +51,7 @@ async function saveVin(rawValue) {
   // O registro novo e sempre o primeiro da lista.
   currentEntryTimestamp = updated[0]?.timestamp ?? null;
   lastAnnouncedParts = (details.parts || []).join("|");
+  resetDetailTracking(details);
 
   if (currentEntryTimestamp !== null) {
     vinStatsUpsert(currentEntryTimestamp, {
@@ -84,6 +85,43 @@ function announceParts(parts) {
   lastAnnouncedParts = key;
 }
 
+// Perguntas lidas deste VIN e quantas leituras seguidas vieram sem elas. Quando
+// uma resposta do formulario esconde a pergunta (ex.: PEÇAS FALTANTES some),
+// o que foi marcado antes deixa de valer e e limpo.
+const DETAIL_KEYS = ["parts", "model", "color"];
+let detailsSeen = {};
+let detailsAbsent = {};
+
+function resetDetailTracking(details) {
+  detailsSeen = {};
+  detailsAbsent = {};
+  for (const key of DETAIL_KEYS) {
+    detailsSeen[key] = key in details;
+    detailsAbsent[key] = 0;
+  }
+}
+
+// Completa `details` com valores vazios para perguntas que sumiram da tela
+// (confirmado em duas leituras, para ignorar redesenhos momentaneos).
+// Retorna true se ainda e preciso reconferir em instantes.
+function applyHiddenQuestions(details) {
+  let recheck = false;
+  for (const key of DETAIL_KEYS) {
+    if (key in details) {
+      detailsSeen[key] = true;
+      detailsAbsent[key] = 0;
+    } else if (detailsSeen[key]) {
+      detailsAbsent[key] += 1;
+      if (detailsAbsent[key] >= 2) {
+        details[key] = key === "parts" ? [] : "";
+      } else {
+        recheck = true;
+      }
+    }
+  }
+  return recheck;
+}
+
 let partsRefreshTimer = null;
 function refreshPartsSoon() {
   clearTimeout(partsRefreshTimer);
@@ -100,6 +138,10 @@ function refreshPartsSoon() {
       return;
     }
     const details = readFormDetails();
+    const recheck = applyHiddenQuestions(details);
+    if (recheck) {
+      setTimeout(refreshPartsSoon, 500);
+    }
     if (Object.keys(details).length > 0) {
       announceParts(details.parts);
       vinSetEntryDetails(currentEntryTimestamp, details);
