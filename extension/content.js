@@ -85,9 +85,18 @@ function refreshPartsSoon() {
   }, 150);
 }
 
-for (const type of ["click", "change", "input", "keyup"]) {
+for (const type of ["click", "change", "input", "keyup", "mouseup"]) {
   document.addEventListener(type, refreshPartsSoon, true);
 }
+
+// Rede de seguranca: o Forms as vezes muda a caixa (marcar/desmarcar) sem um
+// evento que chegue ate aqui. Enquanto ha um VIN atual, confere a cada 1,5s;
+// so grava se algo mudou.
+setInterval(() => {
+  if (currentEntryTimestamp !== null && document.visibilityState === "visible") {
+    refreshPartsSoon();
+  }
+}, 1500);
 
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
 // aria-label e, por fim, subindo pelos ancestrais ate achar um texto curto
