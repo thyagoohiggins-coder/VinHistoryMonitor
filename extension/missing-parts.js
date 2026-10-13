@@ -5,6 +5,26 @@ const PARTS_LABEL_REGEX = /\bPE[ÇC]AS\s+FALTANTES\b/i;
 const PARTS_CHECKBOX_SELECTOR = 'input[type="checkbox"], [role="checkbox"]';
 const PARTS_TITLE_MAX_LENGTH = 200;
 
+// O elemento esta realmente na tela? O Forms esconde perguntas ramificadas
+// (display:none, hidden, altura zero) em vez de remove-las, e as respostas
+// escondidas continuam marcadas no HTML.
+function isRendered(el) {
+  if (!el || !el.isConnected) {
+    return false;
+  }
+  for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+    if (node.hidden) {
+      return false;
+    }
+    const style = getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden") {
+      return false;
+    }
+  }
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
 function isCheckboxChecked(el) {
   if (el.tagName === "INPUT") {
     return el.checked;
@@ -94,7 +114,11 @@ function findQuestionContainer(titleRegex, selector, prefilter, maxTitle = PARTS
     let container = title;
     for (let i = 0; i < 10 && container; i += 1) {
       if (container.querySelector(selector)) {
-        return container;
+        // Pergunta escondida pelo formulario conta como ausente.
+        if (isRendered(container)) {
+          return container;
+        }
+        break;
       }
       container = container.parentElement;
     }

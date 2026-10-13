@@ -167,7 +167,7 @@ function refreshPartsSoon() {
     const details = readFormDetails();
     const recheck = applyHiddenQuestions(details);
     if (recheck) {
-      setTimeout(refreshPartsSoon, 500);
+      setTimeout(refreshPartsSoon, 300);
     }
     if (Object.keys(details).length > 0) {
       announceParts(details.parts);
@@ -186,13 +186,13 @@ for (const type of ["click", "change", "input", "keyup", "mouseup"]) {
 }
 
 // Rede de seguranca: o Forms as vezes muda a caixa (marcar/desmarcar) sem um
-// evento que chegue ate aqui. Enquanto ha um VIN atual, confere a cada 1,5s;
+// evento que chegue ate aqui. Enquanto ha um VIN atual, confere a cada 0,8s;
 // so grava se algo mudou.
 setInterval(() => {
   if (currentEntryTimestamp !== null && document.visibilityState === "visible") {
     refreshPartsSoon();
   }
-}, 1500);
+}, 800);
 
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
 // aria-label e, por fim, subindo pelos ancestrais ate achar um texto curto
