@@ -59,7 +59,7 @@ function render(history) {
 
   const isEmpty = history.length === 0;
   const count = history.length;
-  const duplicates = vinFindDuplicates(history);
+  const repeats = vinRepeatInfo(history);
 
   emptyStateEl.style.display = isEmpty ? "block" : "none";
   listEl.style.display = isEmpty ? "none" : "block";
@@ -73,10 +73,11 @@ function render(history) {
   const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
 
   for (const entry of sorted) {
-    const isDuplicate = duplicates.has(vinCompareKey(entry.vin));
+    const repeat = repeats.get(entry.timestamp);
 
     const li = document.createElement("li");
-    li.className = "history-item" + (isDuplicate ? " duplicate-entry" : "");
+    li.className = "history-item";
+    vinMarkRepeat(li, repeat);
 
     const vinRow = document.createElement("div");
     vinRow.className = "vin-row";
@@ -91,11 +92,8 @@ function render(history) {
       vinRow.appendChild(badges);
     }
 
-    if (isDuplicate) {
-      const tag = document.createElement("span");
-      tag.className = "duplicate-tag";
-      tag.textContent = "Já lançado";
-      vinRow.appendChild(tag);
+    if (repeat) {
+      vinRow.appendChild(vinBuildLaunchTag(repeat.ordinal));
     }
 
     const deleteBtn = document.createElement("button");
@@ -126,6 +124,8 @@ function render(history) {
     }
     listEl.appendChild(li);
   }
+
+  vinDecorateRepeats(listEl);
 }
 
 // O resumo (total e VINs por turno) fica escondido ate o usuario pedir.

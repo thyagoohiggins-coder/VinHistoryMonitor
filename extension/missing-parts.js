@@ -12,8 +12,37 @@ function isCheckboxChecked(el) {
   return el.getAttribute("aria-checked") === "true";
 }
 
-// Texto da opcao: aria-label / label associado, ou o texto do menor ancestral
-// que contenha so esta caixa. Na opcao "Outra" soma o texto digitado.
+const PARTS_TEXT_FIELD_SELECTOR = 'input[type="text"], input:not([type]), textarea';
+
+// Menor "raiz" da opcao: o maior ancestral que contem so esta caixa. E nela
+// que ficam o texto da opcao e, na opcao "Outra", o campo de texto digitado.
+function getOptionRoot(box, selector) {
+  let root = box.parentElement;
+  let last = root;
+  for (let i = 0; i < 6 && root; i += 1) {
+    if (root.querySelectorAll(selector).length > 1) {
+      break;
+    }
+    last = root;
+    root = root.parentElement;
+  }
+  return last;
+}
+
+// Texto digitado na opcao "Outra" (vazio nas demais).
+function getOptionTypedText(box, selector = PARTS_CHECKBOX_SELECTOR) {
+  const root = getOptionRoot(box, selector);
+  if (!root) {
+    return "";
+  }
+  return [...root.querySelectorAll(PARTS_TEXT_FIELD_SELECTOR)]
+    .map((field) => field.value.trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+// Texto da opcao: aria-label / label associado, ou o texto da raiz da opcao.
+// Na opcao "Outra" vale o que foi digitado ("Outra: texto").
 function getCheckboxOptionText(box, selector = PARTS_CHECKBOX_SELECTOR) {
   const ariaLabel = (box.getAttribute("aria-label") || "").trim();
   const labelledBy = box.getAttribute("aria-labelledby");
@@ -25,31 +54,14 @@ function getCheckboxOptionText(box, selector = PARTS_CHECKBOX_SELECTOR) {
         .trim()
     : "";
 
-  let wrapper = box.parentElement;
-  for (let i = 0; i < 6 && wrapper; i += 1) {
-    if (wrapper.querySelectorAll(selector).length > 1) {
-      wrapper = null;
-      break;
-    }
-    const hasContent =
-      (wrapper.textContent || "").trim() || wrapper.querySelector('input[type="text"], textarea');
-    if (hasContent) {
-      break;
-    }
-    wrapper = wrapper.parentElement;
-  }
+  const root = getOptionRoot(box, selector);
+  const placeholder = root?.querySelector(PARTS_TEXT_FIELD_SELECTOR)?.placeholder || "";
+  const typed = getOptionTypedText(box, selector);
 
-  const typed = wrapper
-    ? [...wrapper.querySelectorAll('input[type="text"], input:not([type]), textarea')]
-        .map((field) => field.value.trim())
-        .filter(Boolean)
-        .join(" ")
-    : "";
-  const placeholder = wrapper?.querySelector('input[type="text"], input:not([type]), textarea')?.placeholder || "";
-
-  const base = (fromIds || ariaLabel || (wrapper?.textContent || "")).replace(/\s+/g, " ").trim();
+  const base = (fromIds || ariaLabel || (root?.textContent || "")).replace(/\s+/g, " ").trim();
   if (typed) {
-    return base && base !== typed ? `${base}: ${typed}` : typed;
+    // "Outra resposta" + texto vira "Outra: texto".
+    return !base || base === typed || /^outra/i.test(base) ? `Outra: ${typed}` : `${base}: ${typed}`;
   }
   return base || placeholder.trim();
 }
@@ -94,7 +106,8 @@ function findQuestionContainer(titleRegex, selector, prefilter, maxTitle = PARTS
 function readCheckedTexts(container, selector) {
   const texts = [];
   for (const box of container.querySelectorAll(selector)) {
-    if (!isCheckboxChecked(box)) {
+    // A opcao "Outra" conta mesmo sem a caixa marcada, se ha texto digitado.
+    if (!isCheckboxChecked(box) && !getOptionTypedText(box, selector)) {
       continue;
     }
     const text = getCheckboxOptionText(box, selector);

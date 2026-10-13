@@ -105,9 +105,9 @@ function sinceFor(period) {
   return Date.now() - Number(period) * 86400000;
 }
 
-function makeKpi(label, value) {
+function makeKpi(label, value, italic) {
   const box = document.createElement("div");
-  box.className = "kpi";
+  box.className = "kpi" + (italic ? " kpi-italic" : "");
   const l = document.createElement("span");
   l.className = "kpi-label";
   l.textContent = label;
@@ -170,7 +170,7 @@ function render(records) {
     makeKpi("VINs analisados", String(stats.total)),
     makeKpi("Com reparo informado", String(stats.withRepair)),
     makeKpi("Modelo com mais reparos", topModel ? `${topModel.name} (${topModel.count})` : "—"),
-    makeKpi("Reparo mais frequente", topRepair ? `${repairLabel(topRepair)} (${topRepair.count})` : "—")
+    makeKpi("Reparo crítico mais frequente", topRepair ? `${repairLabel(topRepair)} (${topRepair.count})` : "—", true)
   );
 
   // Modelos, cada barra dividida pelas cores dos veiculos.

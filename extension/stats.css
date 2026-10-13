@@ -131,3 +131,9 @@ body {
   font-size: 13px;
   color: #777;
 }
+
+.single .bar-label,
+.kpi-italic .kpi-value {
+  font-style: italic;
+  font-weight: 700;
+}

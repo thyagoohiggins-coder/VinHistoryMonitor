@@ -180,8 +180,9 @@ h1 {
 
 .history-item .vin-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
 }
 
 .delete-entry-btn {
@@ -205,7 +206,7 @@ h1 {
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0.5px;
-  word-break: break-all;
+  white-space: nowrap;
 }
 
 .duplicate-tag {
@@ -374,4 +375,24 @@ h1 {
 
 .repair-value {
   word-break: break-word;
+}
+
+.launch-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.launch-1 { background: #000; }
+.launch-2 { background: #7c3aed; }
+.launch-3 { background: #ea580c; }
+.launch-4 { background: #dc2626; }
+
+.repair-value {
+  font-weight: 700;
+  font-style: italic;
 }

@@ -30,9 +30,10 @@ registro.
 - **Separacao e contagem por turno:** os VINs sao classificados pelo horario
   em que foram registrados. O popup e a lista mostram o total de VINs de
   cada turno, e a lista agrupa os VINs por turno, com a quantidade de cada um. 
-- **Destaque de "Já lançado":** VINs que aparecem mais de uma vez no historico
-  sao destacados (borda/fundo amarelo e etiqueta "Já lançado") tanto na lista
-  do popup quanto na pagina da lista.
+- **VINs repetidos:** quando o mesmo VIN aparece mais de uma vez, o mais antigo
+  ganha a etiqueta preta "Primeiro lançamento", o seguinte a roxa "Segundo
+  lançamento" (depois "Terceiro", "Quarto"...). Os lancamentos do mesmo VIN
+  sao ligados por uma linha lateral colorida (cada VIN repetido usa uma cor).
 - **Lista de VINs:** pagina dedicada (aberta pelo botao "Ver lista de VINs"
   no popup) com os VINs do dia separados por turno, quantidade de cada turno,
   busca por VIN, destaque de duplicados e botao para apagar cada VIN.
@@ -67,7 +68,7 @@ registro.
   lista (um por linha) e exportar o banco em `.txt`. O banco pode ser
   **congelado** (interruptor): congelado, nao aprende nem aceita reparos novos.
 - **Popup enxuto:** icone "FA", botao de configuracoes (engrenagem), "Ver lista
-  de VINs", "Indicadores de reparos" e os VINs recentes. O total e os VINs por
+  de VINs", "Indicadores de reparos críticos" e os VINs recentes. O total e os VINs por
   turno ficam escondidos atras de "Mostrar resumo".
 - **Configuracoes** (`settings.html`): remover repetidos, limpeza ao fim do 3º
   turno, banco de reparos (congelar, adicionar, importar/exportar) e a **area
@@ -75,8 +76,8 @@ registro.
   geral", "Apagar indicadores" e troca de PIN. O PIN e uma trava de interface
   (guardado como hash local), nao uma protecao contra quem tem acesso ao
   navegador.
-- **Indicadores** (`stats.html`): modelos com mais reparos (barras divididas
-  pelas cores dos veiculos), reparos mais frequentes (com o modelo onde mais
+- **Indicadores de reparos críticos** (`stats.html`): modelos com mais reparos (barras divididas
+  pelas cores dos veiculos), reparos críticos mais frequentes (com o modelo onde mais
   ocorrem) e filtro por periodo (dia de producao, 7 dias, 30 dias, tudo). Os
   dados ficam num registro proprio que **nao e apagado na virada do dia**; cada
   VIN conta uma vez (o registro mais recente).

@@ -56,11 +56,12 @@ function renderPurgeInfo() {
   purgeInfoEl.textContent = `Os VINs sao apagados automaticamente no fim do 3º turno (proxima limpeza: ${dia} as ${hora}).`;
 }
 
-function buildEntry(entry, duplicates) {
-  const isDuplicate = duplicates.has(vinCompareKey(entry.vin));
+function buildEntry(entry, repeats) {
+  const repeat = repeats.get(entry.timestamp);
 
   const li = document.createElement("li");
-  li.className = "vin-item" + (isDuplicate ? " duplicate-entry" : "");
+  li.className = "vin-item";
+  vinMarkRepeat(li, repeat);
 
   const vinEl = document.createElement("span");
   vinEl.className = "vin";
@@ -72,11 +73,8 @@ function buildEntry(entry, duplicates) {
     li.appendChild(badges);
   }
 
-  if (isDuplicate) {
-    const tag = document.createElement("span");
-    tag.className = "duplicate-tag";
-    tag.textContent = "Já lançado";
-    li.appendChild(tag);
+  if (repeat) {
+    li.appendChild(vinBuildLaunchTag(repeat.ordinal));
   }
 
   const timeEl = document.createElement("span");
@@ -121,7 +119,7 @@ function renderList() {
     return;
   }
 
-  const duplicates = vinFindDuplicates(currentHistory);
+  const repeats = vinRepeatInfo(currentHistory);
 
   for (const grupo of vinGroupByShift(filtrado, currentShifts)) {
     const section = document.createElement("section");
@@ -146,12 +144,21 @@ function renderList() {
     const ul = document.createElement("ul");
     ul.className = "vin-list";
     for (const entry of grupo.entries) {
-      ul.appendChild(buildEntry(entry, duplicates));
+      ul.appendChild(buildEntry(entry, repeats));
     }
     section.appendChild(ul);
     listContainer.appendChild(section);
   }
+
+  vinDecorateRepeats(listContainer);
 }
+
+// A largura da janela muda a altura das linhas: redesenha a linha lateral.
+let decorateTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(decorateTimer);
+  decorateTimer = setTimeout(() => vinDecorateRepeats(listContainer), 100);
+});
 
 function render(history) {
   currentHistory = history || [];
@@ -160,7 +167,7 @@ function render(history) {
 
   const redundant = vinCountRedundant(currentHistory);
   dupeCountEl.textContent =
-    redundant > 0 ? `${redundant} já lançado${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}` : "";
+    redundant > 0 ? `${redundant} lançamento${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}` : "";
 
   renderShiftCounts(currentHistory, currentShifts);
   renderList();
