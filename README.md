@@ -32,7 +32,7 @@ registro.
   cada turno, e a lista agrupa os VINs por turno, com a quantidade de cada um. 
 - **VINs repetidos:** quando o mesmo VIN aparece mais de uma vez, o mais antigo
   ganha a etiqueta preta "Primeiro lançamento", o seguinte a roxa "Segundo
-  lançamento" (depois "Terceiro", "Quarto"...). Os lancamentos do mesmo VIN
+  lançamento" (os seguintes, "Terceiro", "Quarto"..., seguem o mesmo padrao roxo). Os lancamentos do mesmo VIN
   sao ligados por uma linha lateral colorida (cada VIN repetido usa uma cor).
 - **Lista de VINs:** pagina dedicada (aberta pelo botao "Ver lista de VINs"
   no popup) com os VINs do dia separados por turno, quantidade de cada turno,

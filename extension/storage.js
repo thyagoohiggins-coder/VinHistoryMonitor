@@ -501,7 +501,8 @@ function vinRepeatInfo(history) {
 
 function vinBuildLaunchTag(ordinal) {
   const tag = document.createElement("span");
-  tag.className = `launch-tag launch-${Math.min(ordinal, 4)}`;
+  // Primeiro lancamento: preto; todos os seguintes seguem o padrao do segundo (roxo).
+  tag.className = `launch-tag launch-${Math.min(ordinal, 2)}`;
   tag.textContent = `${VIN_ORDINALS[ordinal - 1] || `${ordinal}º`} lançamento`;
   return tag;
 }
