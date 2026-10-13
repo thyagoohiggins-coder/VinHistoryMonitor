@@ -91,6 +91,13 @@ function announceParts(parts) {
 const DETAIL_KEYS = ["parts", "model", "color"];
 let detailsSeen = {};
 let detailsAbsent = {};
+let repairSeen = false;
+let repairAbsent = 0;
+
+// O campo "PRINCIPAL REPARO" tambem pode ser escondido por uma resposta.
+function repairFieldPresent() {
+  return typeof isRepairFieldPresent === "function" ? isRepairFieldPresent() : null;
+}
 
 function resetDetailTracking(details) {
   detailsSeen = {};
@@ -99,6 +106,8 @@ function resetDetailTracking(details) {
     detailsSeen[key] = key in details;
     detailsAbsent[key] = 0;
   }
+  repairSeen = repairFieldPresent() === true;
+  repairAbsent = 0;
 }
 
 // Completa `details` com valores vazios para perguntas que sumiram da tela
@@ -117,6 +126,24 @@ function applyHiddenQuestions(details) {
       } else {
         recheck = true;
       }
+    }
+  }
+
+  const repairPresent = repairFieldPresent();
+  if (repairPresent === true) {
+    repairSeen = true;
+    repairAbsent = 0;
+  } else if (repairPresent === false && repairSeen) {
+    repairAbsent += 1;
+    if (repairAbsent >= 2) {
+      // Campo escondido: o texto digitado antes deixa de valer para este VIN.
+      details.repair = "";
+      repairSeen = false;
+      if (typeof repairLearned !== "undefined") {
+        repairLearned = "";
+      }
+    } else {
+      recheck = true;
     }
   }
   return recheck;
@@ -145,7 +172,11 @@ function refreshPartsSoon() {
     if (Object.keys(details).length > 0) {
       announceParts(details.parts);
       vinSetEntryDetails(currentEntryTimestamp, details);
-      vinStatsUpsert(currentEntryTimestamp, { model: details.model, color: details.color });
+      vinStatsUpsert(currentEntryTimestamp, {
+        model: details.model,
+        color: details.color,
+        repair: details.repair,
+      });
     }
   }, 150);
 }

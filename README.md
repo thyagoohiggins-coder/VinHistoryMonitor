@@ -52,7 +52,7 @@ registro.
   e e apagado junto com ele na limpeza ao fim do 3º turno. Tambem entra nos
   indicadores, que sao permanentes.
 - **Perguntas escondidas:** se uma resposta do formulario esconde a pergunta
-  PEÇAS FALTANTES (ou MODELO/COR), o que foi marcado nela antes e limpo do VIN.
+  PEÇAS FALTANTES, MODELO, COR ou PRINCIPAL REPARO, o que foi preenchido nela antes e limpo do VIN (e dos indicadores).
 - **Cripple (PEÇAS FALTANTES):** a lista (e o popup) mostram, na frente de cada
   VIN, as opcoes marcadas na pergunta "PEÇAS FALTANTES" do formulario (varias
   ou todas podem estar marcadas; "Outra" mostra o texto digitado). As opcoes

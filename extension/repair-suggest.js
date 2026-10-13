@@ -200,6 +200,14 @@ function updateRepairSuggestions() {
   renderRepairBox();
 }
 
+// true/false: o campo PRINCIPAL REPARO esta (ou nao) na tela agora.
+function isRepairFieldPresent() {
+  if (repairInput && repairInput.isConnected) {
+    return true;
+  }
+  return findRepairInput() !== null;
+}
+
 // Texto atual do campo de reparo ("" se nao ha campo ou esta vazio).
 function getCurrentRepairText() {
   if (!repairInput || !repairInput.isConnected) {
