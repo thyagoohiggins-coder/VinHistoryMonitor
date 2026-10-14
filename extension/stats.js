@@ -21,10 +21,10 @@ function topEntry(map) {
 // Agrega os registros: cada VIN conta uma vez (o mais recente) e so entram
 // os registrados a partir de `since` (ms). `partsByTs` completa as pecas
 // faltantes de registros antigos que nao as gravaram nos indicadores.
-function computeStats(records, since, partsByTs = new Map()) {
+function computeStats(records, since, partsByTs = new Map(), until = Infinity) {
   const byVin = new Map();
   for (const record of records) {
-    if (!record.vin || record.ts < since) continue;
+    if (!record.vin || record.ts < since || record.ts >= until) continue;
     const key = vinCompareKey(record.vin);
     const previous = byVin.get(key);
     if (!previous || record.ts > previous.ts) byVin.set(key, record);
@@ -76,9 +76,14 @@ function computeStats(records, since, partsByTs = new Map()) {
 }
 
 // ---------------------------------------------------------------- tela
+function untilFor(period) {
+  return period === "yesterday" ? vinCycleStart(Date.now(), VIN_DEFAULT_SHIFTS) : Infinity;
+}
+
 function sinceFor(period) {
   if (period === "all") return 0;
   if (period === "today") return vinCycleStart(Date.now(), VIN_DEFAULT_SHIFTS);
+  if (period === "yesterday") return vinCycleStart(vinCycleStart(Date.now(), VIN_DEFAULT_SHIFTS) - 1, VIN_DEFAULT_SHIFTS);
   return Date.now() - Number(period) * 86400000;
 }
 
@@ -149,7 +154,7 @@ function repairLabel(repair) {
 }
 
 function render(records) {
-  const stats = computeStats(records, sinceFor(periodSelect.value), historyParts);
+  const stats = computeStats(records, sinceFor(periodSelect.value), historyParts, untilFor(periodSelect.value));
 
   kpisEl.innerHTML = "";
   const topModel = stats.models[0];
