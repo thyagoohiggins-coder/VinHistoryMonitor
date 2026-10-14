@@ -30,8 +30,23 @@
       <ul id="shiftCounts" class="shift-counts"></ul>
     </section>
 
-    <div class="toolbar">
+    <div class="toolbar filters">
       <input id="searchInput" type="search" placeholder="Buscar VIN..." autocomplete="off" />
+      <select id="modelFilter" title="Modelo">
+        <option value="">Todos os modelos</option>
+      </select>
+      <select id="colorFilter" title="Cor">
+        <option value="">Todas as cores</option>
+      </select>
+      <label class="time-filter">
+        De <input id="timeFrom" type="time" />
+      </label>
+      <label class="time-filter">
+        ate <input id="timeTo" type="time" />
+      </label>
+      <input id="repairFilter" type="search" placeholder="Reparo..." autocomplete="off" />
+      <button id="clearFilters" type="button" class="clear-filters">Limpar filtros</button>
+      <span id="filterCount" class="filter-count"></span>
     </div>
 
     <div id="listContainer"></div>

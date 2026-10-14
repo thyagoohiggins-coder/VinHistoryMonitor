@@ -4,6 +4,13 @@ const dupeCountEl = document.getElementById("dupeCount");
 const shiftCountsEl = document.getElementById("shiftCounts");
 const purgeInfoEl = document.getElementById("purgeInfo");
 const searchInput = document.getElementById("searchInput");
+const modelFilter = document.getElementById("modelFilter");
+const colorFilter = document.getElementById("colorFilter");
+const timeFrom = document.getElementById("timeFrom");
+const timeTo = document.getElementById("timeTo");
+const repairFilter = document.getElementById("repairFilter");
+const clearFiltersBtn = document.getElementById("clearFilters");
+const filterCountEl = document.getElementById("filterCount");
 
 let currentHistory = [];
 let currentShifts = VIN_DEFAULT_SHIFTS;
@@ -103,18 +110,91 @@ function buildEntry(entry, repeats) {
   return li;
 }
 
+// Texto sem acentos, maiusculo e com espacos simples, para comparar reparos.
+function filterText(value) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function timeToMinutes(value) {
+  const match = /^(\d{2}):(\d{2})$/.exec(value || "");
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+// Intervalo de hora inclusivo; "De 22:00 ate 02:00" atravessa a meia-noite.
+function inTimeRange(timestamp, from, to) {
+  if (from === null && to === null) return true;
+  const minutos = vinMinutesOfDay(timestamp);
+  if (from === null) return minutos <= to;
+  if (to === null) return minutos >= from;
+  return from <= to ? minutos >= from && minutos <= to : minutos >= from || minutos <= to;
+}
+
+// Preenche um <select> com os valores existentes, mantendo a escolha atual.
+function fillFilterOptions(select, values) {
+  const atual = select.value;
+  const unicos = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  if (atual && !unicos.includes(atual)) unicos.unshift(atual);
+  while (select.options.length > 1) select.remove(1);
+  for (const value of unicos) {
+    select.add(new Option(value, value));
+  }
+  select.value = atual;
+}
+
+function applyFilters(history) {
+  const termo = vinCompareKey(searchInput.value);
+  const modelo = modelFilter.value;
+  const cor = colorFilter.value;
+  const from = timeToMinutes(timeFrom.value);
+  const to = timeToMinutes(timeTo.value);
+  const reparo = filterText(repairFilter.value);
+
+  return history.filter(
+    (entry) =>
+      (!termo || vinCompareKey(entry.vin).includes(termo)) &&
+      (!modelo || entry.model === modelo) &&
+      (!cor || entry.color === cor) &&
+      inTimeRange(entry.timestamp, from, to) &&
+      (!reparo || filterText(entry.repair).includes(reparo))
+  );
+}
+
+function hasActiveFilter() {
+  return Boolean(
+    searchInput.value.trim() ||
+      modelFilter.value ||
+      colorFilter.value ||
+      timeFrom.value ||
+      timeTo.value ||
+      repairFilter.value.trim()
+  );
+}
+
 function renderList() {
   listContainer.innerHTML = "";
 
-  const termo = vinCompareKey(searchInput.value);
-  const filtrado = termo
-    ? currentHistory.filter((entry) => vinCompareKey(entry.vin).includes(termo))
-    : currentHistory;
+  const filtrado = applyFilters(currentHistory);
+  filterCountEl.textContent = hasActiveFilter()
+    ? `${filtrado.length} de ${currentHistory.length} VIN${currentHistory.length === 1 ? "" : "s"}`
+    : "";
 
   if (currentHistory.length === 0) {
     const vazio = document.createElement("p");
     vazio.className = "empty-list";
     vazio.textContent = "Nenhum VIN na lista. Preencha o campo VIN no formulario.";
+    listContainer.appendChild(vazio);
+    return;
+  }
+
+  if (filtrado.length === 0) {
+    const vazio = document.createElement("p");
+    vazio.className = "empty-list";
+    vazio.textContent = "Nenhum VIN encontrado com esses filtros.";
     listContainer.appendChild(vazio);
     return;
   }
@@ -170,10 +250,23 @@ function render(history) {
     redundant > 0 ? `${redundant} lançamento${redundant === 1 ? "" : "s"} repetido${redundant === 1 ? "" : "s"}` : "";
 
   renderShiftCounts(currentHistory, currentShifts);
+  fillFilterOptions(modelFilter, currentHistory.map((entry) => entry.model));
+  fillFilterOptions(colorFilter, currentHistory.map((entry) => entry.color));
   renderList();
 }
 
-searchInput.addEventListener("input", renderList);
+for (const el of [searchInput, repairFilter, timeFrom, timeTo]) {
+  el.addEventListener("input", renderList);
+}
+for (const el of [modelFilter, colorFilter, timeFrom, timeTo]) {
+  el.addEventListener("change", renderList);
+}
+clearFiltersBtn.addEventListener("click", () => {
+  for (const el of [searchInput, modelFilter, colorFilter, timeFrom, timeTo, repairFilter]) {
+    el.value = "";
+  }
+  renderList();
+});
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") {
