@@ -71,7 +71,7 @@ function findRepairInput() {
     if (candidate.tagName === "INPUT" && !isVinCandidateInput(candidate)) {
       continue;
     }
-    if (REPAIR_LABEL_REGEX.test(getFieldLabelText(candidate, REPAIR_LABEL_REGEX))) {
+    if (REPAIR_LABEL_REGEX.test(getFieldLabelText(candidate, REPAIR_LABEL_REGEX)) && isRendered(candidate)) {
       return candidate;
     }
   }
@@ -200,8 +200,25 @@ function updateRepairSuggestions() {
   renderRepairBox();
 }
 
+// true/false: o campo PRINCIPAL REPARO esta (ou nao) na tela agora.
+function isRepairFieldPresent() {
+  if (repairInput && isRendered(repairInput)) {
+    return true;
+  }
+  return findRepairInput() !== null;
+}
+
+// Texto atual do campo de reparo ("" se nao ha campo ou esta vazio).
+function getCurrentRepairText() {
+  if (!repairInput || !isRendered(repairInput)) {
+    return "";
+  }
+  return getFieldValue(repairInput).replace(/\s+/g, " ").trim();
+}
+
 function learnRepair() {
-  if (!repairInput) {
+  // Campo escondido pelo formulario: o texto que ficou la nao vale.
+  if (!repairInput || !isRendered(repairInput)) {
     return;
   }
   const text = getFieldValue(repairInput).replace(/\s+/g, " ").trim();
@@ -218,8 +235,9 @@ function learnRepair() {
   repairLearned = learnedKey;
   repairLearn(text);
 
-  // O reparo tambem entra nos indicadores, ligado ao VIN atual.
+  // O reparo fica junto do VIN (lista) e tambem entra nos indicadores.
   if (currentEntryTimestamp !== null) {
+    vinSetEntryDetails(currentEntryTimestamp, { repair: text });
     vinStatsUpsert(currentEntryTimestamp, { repair: text });
   }
 }
@@ -275,7 +293,7 @@ window.addEventListener("resize", positionRepairBox);
 let repairScanPending = false;
 function scanRepair() {
   // Campo atual ainda na tela: nada a procurar.
-  if (repairInput && repairInput.isConnected) {
+  if (repairInput && isRendered(repairInput)) {
     return;
   }
   const input = findRepairInput();

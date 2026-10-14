@@ -41,43 +41,160 @@ async function saveVin(rawValue) {
 
   recordedValue = vin;
 
-  const updated = await vinAddEntry(vin, readFormDetails());
+  const details = readFormDetails();
+  // Reparo ja digitado antes do VIN ser registrado entra junto.
+  const repair = typeof getCurrentRepairText === "function" ? getCurrentRepairText() : "";
+  if (repair) {
+    details.repair = repair;
+  }
+  const updated = await vinAddEntry(vin, details);
   // O registro novo e sempre o primeiro da lista.
   currentEntryTimestamp = updated[0]?.timestamp ?? null;
+  lastAnnouncedParts = (details.parts || []).join("|");
+  resetDetailTracking(details);
 
   if (currentEntryTimestamp !== null) {
-    const details = readFormDetails();
-    vinStatsUpsert(currentEntryTimestamp, { vin, model: details.model, color: details.color, parts: details.parts });
+    vinStatsUpsert(currentEntryTimestamp, {
+      vin,
+      model: details.model,
+      color: details.color,
+      repair: details.repair,
+      parts: details.parts,
+    });
   }
 }
 
 // Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
 // clicar numa caixa, atualiza o registro do VIN atual.
+// Aviso rapido na tela quando as pecas faltantes mudam: confirma que a
+// extensao viu a marcacao (ou a retirada) de uma opcao.
+let lastAnnouncedParts = null;
+function announceParts(parts) {
+  if (!parts) {
+    return;
+  }
+  const key = parts.join("|");
+  if (lastAnnouncedParts !== null && key !== lastAnnouncedParts) {
+    const toast = document.createElement("div");
+    toast.textContent = parts.length === 0 ? "Cripple: nenhuma peça" : `Cripple atualizado (${parts.length})`;
+    toast.style.cssText =
+      "position:fixed;right:12px;bottom:12px;z-index:2147483647;background:#111;color:#fff;" +
+      "padding:5px 10px;border-radius:6px;font:12px system-ui,sans-serif;opacity:.9;";
+    document.documentElement.appendChild(toast);
+    setTimeout(() => toast.remove(), 1800);
+  }
+  lastAnnouncedParts = key;
+}
+
+// Perguntas lidas deste VIN e quantas leituras seguidas vieram sem elas. Quando
+// uma resposta do formulario esconde a pergunta (ex.: PEÇAS FALTANTES some),
+// o que foi marcado antes deixa de valer e e limpo.
+const DETAIL_KEYS = ["parts", "model", "color"];
+let detailsSeen = {};
+let detailsAbsent = {};
+let repairSeen = false;
+let repairAbsent = 0;
+
+// O campo "PRINCIPAL REPARO" tambem pode ser escondido por uma resposta.
+function repairFieldPresent() {
+  return typeof isRepairFieldPresent === "function" ? isRepairFieldPresent() : null;
+}
+
+function resetDetailTracking(details) {
+  detailsSeen = {};
+  detailsAbsent = {};
+  for (const key of DETAIL_KEYS) {
+    detailsSeen[key] = key in details;
+    detailsAbsent[key] = 0;
+  }
+  repairSeen = repairFieldPresent() === true;
+  repairAbsent = 0;
+}
+
+// Completa `details` com valores vazios para perguntas que sumiram da tela
+// (confirmado em duas leituras, para ignorar redesenhos momentaneos).
+// Retorna true se ainda e preciso reconferir em instantes.
+function applyHiddenQuestions(details) {
+  let recheck = false;
+  for (const key of DETAIL_KEYS) {
+    if (key in details) {
+      detailsSeen[key] = true;
+      detailsAbsent[key] = 0;
+    } else if (detailsSeen[key]) {
+      detailsAbsent[key] += 1;
+      if (detailsAbsent[key] >= 2) {
+        details[key] = key === "parts" ? [] : "";
+      } else {
+        recheck = true;
+      }
+    }
+  }
+
+  const repairPresent = repairFieldPresent();
+  if (repairPresent === true) {
+    repairSeen = true;
+    repairAbsent = 0;
+  } else if (repairPresent === false && repairSeen) {
+    repairAbsent += 1;
+    if (repairAbsent >= 2) {
+      // Campo escondido: o texto digitado antes deixa de valer para este VIN.
+      details.repair = "";
+      repairSeen = false;
+      if (typeof repairLearned !== "undefined") {
+        repairLearned = "";
+      }
+    } else {
+      recheck = true;
+    }
+  }
+  return recheck;
+}
+
 let partsRefreshTimer = null;
 function refreshPartsSoon() {
   clearTimeout(partsRefreshTimer);
   partsRefreshTimer = setTimeout(() => {
-    // So atualiza enquanto o campo ainda mostra o VIN gravado: depois do
-    // envio o formulario volta zerado e apagaria as pecas ja registradas.
+    // So atualiza enquanto existe um VIN preenchido na tela: depois do envio o
+    // formulario volta vazio (o registro atual e liberado) e nao pode apagar
+    // as pecas ja registradas.
     if (
       currentEntryTimestamp === null ||
       !currentVinInput ||
       !currentVinInput.isConnected ||
-      vinNormalize(getFieldValue(currentVinInput)) !== recordedValue
+      !vinNormalize(getFieldValue(currentVinInput))
     ) {
       return;
     }
     const details = readFormDetails();
+    const recheck = applyHiddenQuestions(details);
+    if (recheck) {
+      setTimeout(refreshPartsSoon, 300);
+    }
     if (Object.keys(details).length > 0) {
+      announceParts(details.parts);
       vinSetEntryDetails(currentEntryTimestamp, details);
-      vinStatsUpsert(currentEntryTimestamp, { model: details.model, color: details.color, parts: details.parts });
+      vinStatsUpsert(currentEntryTimestamp, {
+        model: details.model,
+        color: details.color,
+        repair: details.repair,
+        parts: details.parts,
+      });
     }
   }, 150);
 }
 
-for (const type of ["click", "change", "input", "keyup"]) {
+for (const type of ["click", "change", "input", "keyup", "mouseup"]) {
   document.addEventListener(type, refreshPartsSoon, true);
 }
+
+// Rede de seguranca: o Forms as vezes muda a caixa (marcar/desmarcar) sem um
+// evento que chegue ate aqui. Enquanto ha um VIN atual, confere a cada 0,8s;
+// so grava se algo mudou.
+setInterval(() => {
+  if (currentEntryTimestamp !== null && document.visibilityState === "visible") {
+    refreshPartsSoon();
+  }
+}, 800);
 
 // Retorna o texto do rotulo associado a um campo, tentando aria-labelledby,
 // aria-label e, por fim, subindo pelos ancestrais ate achar um texto curto

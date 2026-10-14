@@ -4,7 +4,7 @@ const modelBarsEl = document.getElementById("modelBars");
 const repairBarsEl = document.getElementById("repairBars");
 
 const NO_MODEL = "Sem modelo";
-const TOP_REPAIRS = 10;
+const TOP_REPAIRS = 5;
 
 function bump(map, key, by = 1) {
   map.set(key, (map.get(key) || 0) + by);
@@ -57,11 +57,12 @@ function computeStats(records, since, partsByTs = new Map()) {
     const repairKey = repairNormalize(item.repair);
     if (repairKey) {
       if (!repairs.has(repairKey)) {
-        repairs.set(repairKey, { key: repairKey, count: 0, texts: new Map() });
+        repairs.set(repairKey, { key: repairKey, count: 0, texts: new Map(), models: new Map() });
       }
       const repair = repairs.get(repairKey);
       repair.count += 1;
       bump(repair.texts, item.repair.trim());
+      bump(repair.models, modelName);
     }
   }
 
@@ -81,9 +82,9 @@ function sinceFor(period) {
   return Date.now() - Number(period) * 86400000;
 }
 
-function makeKpi(label, value) {
+function makeKpi(label, value, italic) {
   const box = document.createElement("div");
-  box.className = "kpi";
+  box.className = "kpi" + (italic ? " kpi-italic" : "");
   const l = document.createElement("span");
   l.className = "kpi-label";
   l.textContent = label;
@@ -157,7 +158,7 @@ function render(records) {
     makeKpi("VINs analisados", String(stats.total)),
     makeKpi("Com cripple", String(stats.withCripple)),
     makeKpi("Modelo com mais cripples", topModel ? `${topModel.name} (${topModel.count})` : "—"),
-    makeKpi("Reparo mais frequente", topRepair ? `${repairLabel(topRepair)} (${topRepair.count})` : "—")
+    makeKpi("Reparo crítico mais frequente", topRepair ? `${repairLabel(topRepair)} (${topRepair.count})` : "—", true)
   );
 
   // Cripples por modelo: total de pecas faltantes e quais foram.
@@ -184,8 +185,10 @@ function render(records) {
   }
   const maxRepair = top[0]?.count || 1;
   for (const repair of top) {
+    const topRepairModel = topEntry(repair.models);
+    const note = topRepairModel ? `Mais em: ${topRepairModel[0]} (${topRepairModel[1]})` : "";
     repairBarsEl.appendChild(
-      makeBarRow(repairLabel(repair), repair.count, maxRepair, [{ label: "Total", count: repair.count }], "", true)
+      makeBarRow(repairLabel(repair), repair.count, maxRepair, [{ label: "Total", count: repair.count }], note, true)
     );
   }
 }

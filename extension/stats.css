@@ -126,3 +126,9 @@ body {
   font-size: 13px;
   color: #777;
 }
+
+#repairBars .bar-label,
+.kpi-italic .kpi-value {
+  font-style: italic;
+  font-weight: 700;
+}

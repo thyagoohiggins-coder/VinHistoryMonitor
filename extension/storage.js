@@ -188,7 +188,14 @@ async function vinPurgeExpired() {
   if (!settings.autoPurgeEnabled) {
     return vinGetHistory();
   }
-  return vinMutateHistory((history) => vinDropExpired(history, settings.shifts));
+
+  // So grava quando ha algo vencido (evita escritas e eventos desnecessarios).
+  const history = await vinGetHistory();
+  const kept = vinDropExpired(history, settings.shifts);
+  if (kept.length === history.length) {
+    return history;
+  }
+  return vinMutateHistory((current) => vinDropExpired(current, settings.shifts));
 }
 
 // Atualiza modelo, cor e pecas faltantes de um registro ja gravado.
@@ -431,4 +438,143 @@ async function vinCheckPin(pin) {
 
 async function vinSetPin(newPin) {
   await chrome.storage.local.set({ [VIN_PIN_KEY]: await vinHashPin(String(newPin)) });
+}
+
+// Linha "Reparo: ..." com o principal reparo digitado para o VIN.
+function vinBuildRepairRow(entry) {
+  if (!entry.repair) {
+    return null;
+  }
+  const row = document.createElement("div");
+  row.className = "repair-row";
+
+  const label = document.createElement("span");
+  label.className = "repair-label";
+  label.textContent = "Reparo:";
+
+  const text = document.createElement("span");
+  text.className = "repair-value";
+  text.textContent = entry.repair;
+
+  row.append(label, text);
+  return row;
+}
+
+// ---------------------------------------------------------------------------
+// VINs repetidos: "Primeiro lancamento", "Segundo lancamento"... e uma linha
+// lateral ligando os lancamentos do mesmo VIN.
+// ---------------------------------------------------------------------------
+
+const VIN_ORDINALS = [
+  "Primeiro", "Segundo", "Terceiro", "Quarto", "Quinto",
+  "Sexto", "Sétimo", "Oitavo", "Nono", "Décimo",
+];
+// Cor da linha de cada grupo de VIN repetido (varia de um VIN para outro).
+const VIN_GROUP_COLORS = ["#2563eb", "#ea580c", "#db2777", "#0891b2", "#16a34a", "#ca8a04"];
+const VIN_LANE_WIDTH = 12;
+
+// Para cada registro de VIN repetido: { key, ordinal, total, color }, indexado
+// pelo timestamp. O mais antigo do VIN e o primeiro lancamento.
+function vinRepeatInfo(history) {
+  const groups = new Map();
+  for (const entry of history) {
+    const key = vinCompareKey(entry.vin);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(entry);
+  }
+
+  const repeated = [...groups.entries()]
+    .filter(([, list]) => list.length > 1)
+    .sort((a, b) => Math.min(...a[1].map((e) => e.timestamp)) - Math.min(...b[1].map((e) => e.timestamp)));
+
+  const info = new Map();
+  repeated.forEach(([key, list], index) => {
+    const color = VIN_GROUP_COLORS[index % VIN_GROUP_COLORS.length];
+    [...list]
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .forEach((entry, i) => info.set(entry.timestamp, { key, ordinal: i + 1, total: list.length, color }));
+  });
+  return info;
+}
+
+function vinBuildLaunchTag(ordinal) {
+  const tag = document.createElement("span");
+  // Primeiro lancamento: preto; todos os seguintes seguem o padrao do segundo (roxo).
+  tag.className = `launch-tag launch-${Math.min(ordinal, 2)}`;
+  tag.textContent = `${VIN_ORDINALS[ordinal - 1] || `${ordinal}º`} lançamento`;
+  return tag;
+}
+
+// Marca o <li> do registro para a linha lateral (chamar vinDecorateRepeats
+// no container depois de montar a lista).
+function vinMarkRepeat(li, info) {
+  if (info) {
+    li.dataset.repeatKey = info.key;
+    li.dataset.repeatColor = info.color;
+  }
+}
+
+// Desenha, na margem esquerda do container, uma linha por VIN repetido
+// ligando seus lancamentos, com um ponto em cada um. Grupos que nao se
+// sobrepoem dividem a mesma faixa.
+function vinDecorateRepeats(container) {
+  container.querySelectorAll(".repeat-line, .repeat-dot").forEach((el) => el.remove());
+
+  const items = [...container.querySelectorAll("[data-repeat-key]")];
+  const groups = new Map();
+  items.forEach((li, index) => {
+    const key = li.dataset.repeatKey;
+    if (!groups.has(key)) {
+      groups.set(key, { color: li.dataset.repeatColor, items: [], first: index, last: index });
+    }
+    const group = groups.get(key);
+    group.items.push(li);
+    group.last = index;
+  });
+
+  const linked = [...groups.values()].filter((group) => group.items.length > 1);
+  linked.sort((a, b) => a.first - b.first);
+
+  // Faixas: o primeiro grupo livre (que ja terminou) reaproveita a faixa.
+  const laneEnds = [];
+  for (const group of linked) {
+    let lane = laneEnds.findIndex((end) => end < group.first);
+    if (lane === -1) {
+      lane = laneEnds.length;
+    }
+    laneEnds[lane] = group.last;
+    group.lane = lane;
+  }
+
+  container.style.position = "relative";
+  container.style.paddingLeft = linked.length > 0 ? `${laneEnds.length * VIN_LANE_WIDTH + 6}px` : "";
+
+  const base = container.getBoundingClientRect();
+  const center = (li) => {
+    const rect = li.getBoundingClientRect();
+    return rect.top - base.top + rect.height / 2;
+  };
+
+  for (const group of linked) {
+    const x = 3 + group.lane * VIN_LANE_WIDTH;
+    const centers = group.items.map(center);
+
+    const line = document.createElement("div");
+    line.className = "repeat-line";
+    line.style.cssText =
+      `position:absolute;width:1px;left:${x + 2}px;top:${Math.min(...centers)}px;` +
+      `height:${Math.max(...centers) - Math.min(...centers)}px;background:${group.color};`;
+    container.appendChild(line);
+
+    for (const y of centers) {
+      const dot = document.createElement("div");
+      dot.className = "repeat-dot";
+      dot.style.cssText =
+        `position:absolute;width:5px;height:5px;border-radius:50%;left:${x}px;top:${y - 2.5}px;` +
+        `background:${group.color};box-sizing:content-box;`;
+      container.appendChild(dot);
+    }
+  }
 }
