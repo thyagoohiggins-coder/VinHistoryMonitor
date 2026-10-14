@@ -4,7 +4,7 @@
 const VIN_STORAGE_KEY = "vinHistory";
 const VIN_SETTINGS_KEY = "vinSettings";
 // Registro permanente (nao e apagado na virada do dia) usado nos indicadores:
-// { ts, vin, model, color, repair } por VIN lancado.
+// { ts, vin, model, color, parts, repair } por VIN lancado.
 const VIN_STATS_KEY = "vinStats";
 const VIN_STATS_MAX = 20000;
 const VIN_PIN_KEY = "vinPinHash";

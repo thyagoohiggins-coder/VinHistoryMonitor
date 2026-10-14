@@ -47,7 +47,7 @@ async function saveVin(rawValue) {
 
   if (currentEntryTimestamp !== null) {
     const details = readFormDetails();
-    vinStatsUpsert(currentEntryTimestamp, { vin, model: details.model, color: details.color });
+    vinStatsUpsert(currentEntryTimestamp, { vin, model: details.model, color: details.color, parts: details.parts });
   }
 }
 
@@ -70,7 +70,7 @@ function refreshPartsSoon() {
     const details = readFormDetails();
     if (Object.keys(details).length > 0) {
       vinSetEntryDetails(currentEntryTimestamp, details);
-      vinStatsUpsert(currentEntryTimestamp, { model: details.model, color: details.color });
+      vinStatsUpsert(currentEntryTimestamp, { model: details.model, color: details.color, parts: details.parts });
     }
   }, 150);
 }

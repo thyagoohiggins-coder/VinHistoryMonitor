@@ -2,39 +2,9 @@ const periodSelect = document.getElementById("periodSelect");
 const kpisEl = document.getElementById("kpis");
 const modelBarsEl = document.getElementById("modelBars");
 const repairBarsEl = document.getElementById("repairBars");
-const colorLegendEl = document.getElementById("colorLegend");
 
 const NO_MODEL = "Sem modelo";
-const NO_COLOR = "Sem cor";
 const TOP_REPAIRS = 10;
-
-// Cores conhecidas dos veiculos; as demais ficam cinza-claro.
-const COLOR_HEX = {
-  CINZA: "#9ca3af",
-  PRETO: "#111827",
-  AZUL: "#2563eb",
-  BRANCO: "#ffffff",
-  PRATA: "#d1d5db",
-  VERMELHO: "#dc2626",
-  VERDE: "#16a34a",
-  AMARELO: "#facc15",
-  LARANJA: "#f97316",
-  MARROM: "#92400e",
-  VINHO: "#7f1d1d",
-  BEGE: "#d6c3a1",
-  DOURADO: "#ca9a2b",
-};
-
-function colorHex(name) {
-  const key = (name || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-  return COLOR_HEX[key] || "#e5e7eb";
-}
-
-function isLightColor(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  const luminance = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
-  return luminance > 200;
-}
 
 function bump(map, key, by = 1) {
   map.set(key, (map.get(key) || 0) + by);
@@ -49,8 +19,9 @@ function topEntry(map) {
 }
 
 // Agrega os registros: cada VIN conta uma vez (o mais recente) e so entram
-// os registrados a partir de `since` (ms).
-function computeStats(records, since) {
+// os registrados a partir de `since` (ms). `partsByTs` completa as pecas
+// faltantes de registros antigos que nao as gravaram nos indicadores.
+function computeStats(records, since, partsByTs = new Map()) {
   const byVin = new Map();
   for (const record of records) {
     if (!record.vin || record.ts < since) continue;
@@ -62,39 +33,44 @@ function computeStats(records, since) {
   const items = [...byVin.values()];
   const models = new Map();
   const repairs = new Map();
-  const colors = new Map();
+  let withCripple = 0;
 
   for (const item of items) {
     const modelName = item.model || NO_MODEL;
-    const colorName = item.color || NO_COLOR;
+    const parts = Array.isArray(item.parts) ? item.parts : partsByTs.get(item.ts) || [];
 
-    if (!models.has(modelName)) {
-      models.set(modelName, { name: modelName, count: 0, colors: new Map(), repairs: new Map() });
+    if (parts.length > 0) {
+      withCripple += 1;
+      if (!models.has(modelName)) {
+        models.set(modelName, { name: modelName, count: 0, vins: 0, parts: new Map() });
+      }
+      const model = models.get(modelName);
+      model.vins += 1;
+      for (const part of parts) {
+        const label = String(part).trim();
+        if (!label) continue;
+        model.count += 1;
+        bump(model.parts, label);
+      }
     }
-    const model = models.get(modelName);
-    model.count += 1;
-    bump(model.colors, colorName);
-    bump(colors, colorName);
 
     const repairKey = repairNormalize(item.repair);
     if (repairKey) {
       if (!repairs.has(repairKey)) {
-        repairs.set(repairKey, { key: repairKey, count: 0, texts: new Map(), models: new Map() });
+        repairs.set(repairKey, { key: repairKey, count: 0, texts: new Map() });
       }
       const repair = repairs.get(repairKey);
       repair.count += 1;
       bump(repair.texts, item.repair.trim());
-      bump(repair.models, modelName);
-      bump(model.repairs, repairKey);
     }
   }
 
   return {
     total: items.length,
+    withCripple,
     withRepair: items.filter((item) => repairNormalize(item.repair)).length,
     models: [...models.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
     repairs: [...repairs.values()].sort((a, b) => b.count - a.count),
-    colors: [...colors.entries()].sort((a, b) => b[1] - a[1]),
   };
 }
 
@@ -118,7 +94,7 @@ function makeKpi(label, value) {
   return box;
 }
 
-function makeBarRow(label, value, max, segments, note, single) {
+function makeBarRow(label, value, max, segments, note, single, chips) {
   const frag = document.createDocumentFragment();
 
   const row = document.createElement("div");
@@ -152,6 +128,17 @@ function makeBarRow(label, value, max, segments, note, single) {
     p.textContent = note;
     row.appendChild(p);
   }
+  if (chips && chips.length > 0) {
+    const list = document.createElement("div");
+    list.className = "cripple-list";
+    for (const text of chips) {
+      const chip = document.createElement("span");
+      chip.className = "cripple-chip";
+      chip.textContent = text;
+      list.appendChild(chip);
+    }
+    row.appendChild(list);
+  }
   frag.appendChild(row);
   return frag;
 }
@@ -161,47 +148,32 @@ function repairLabel(repair) {
 }
 
 function render(records) {
-  const stats = computeStats(records, sinceFor(periodSelect.value));
+  const stats = computeStats(records, sinceFor(periodSelect.value), historyParts);
 
   kpisEl.innerHTML = "";
   const topModel = stats.models[0];
   const topRepair = stats.repairs[0];
   kpisEl.append(
     makeKpi("VINs analisados", String(stats.total)),
-    makeKpi("Com reparo informado", String(stats.withRepair)),
-    makeKpi("Modelo com mais reparos", topModel ? `${topModel.name} (${topModel.count})` : "—"),
+    makeKpi("Com cripple", String(stats.withCripple)),
+    makeKpi("Modelo com mais cripples", topModel ? `${topModel.name} (${topModel.count})` : "—"),
     makeKpi("Reparo mais frequente", topRepair ? `${repairLabel(topRepair)} (${topRepair.count})` : "—")
   );
 
-  // Modelos, cada barra dividida pelas cores dos veiculos.
+  // Cripples por modelo: total de pecas faltantes e quais foram.
   modelBarsEl.innerHTML = "";
-  colorLegendEl.innerHTML = "";
   if (stats.models.length === 0) {
-    modelBarsEl.innerHTML = '<p class="empty-list">Sem dados no periodo. Os indicadores sao gravados a partir da versao atual, conforme os VINs sao lancados.</p>';
+    modelBarsEl.innerHTML = '<p class="empty-list">Nenhum cripple registrado no periodo.</p>';
   }
   const maxModel = stats.models[0]?.count || 1;
   for (const model of stats.models) {
-    const segments = [...model.colors.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([label, count]) => {
-        const color = colorHex(label);
-        return { label, count, color, light: isLightColor(color) };
-      });
-    const topModelRepair = topEntry(model.repairs);
-    const note = topModelRepair
-      ? `Mais comum: ${repairLabel(repairsByKey(stats, topModelRepair[0]))} (${topModelRepair[1]})`
-      : "";
-    modelBarsEl.appendChild(makeBarRow(model.name, model.count, maxModel, segments, note, false));
-  }
-
-  for (const [label, count] of stats.colors) {
-    const chip = document.createElement("span");
-    chip.className = "legend-chip";
-    const dot = document.createElement("span");
-    dot.className = "legend-dot";
-    dot.style.background = colorHex(label);
-    chip.append(dot, `${label} (${count})`);
-    colorLegendEl.appendChild(chip);
+    const chips = [...model.parts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([part, count]) => `${part} (${count})`);
+    const note = `${model.vins} ${model.vins === 1 ? "VIN" : "VINs"} com cripple`;
+    modelBarsEl.appendChild(
+      makeBarRow(model.name, model.count, maxModel, [{ label: "Cripples", count: model.count }], note, true, chips)
+    );
   }
 
   // Reparos mais frequentes.
@@ -212,30 +184,34 @@ function render(records) {
   }
   const maxRepair = top[0]?.count || 1;
   for (const repair of top) {
-    const topRepairModel = topEntry(repair.models);
-    const note = topRepairModel ? `Mais em: ${topRepairModel[0]} (${topRepairModel[1]})` : "";
     repairBarsEl.appendChild(
-      makeBarRow(repairLabel(repair), repair.count, maxRepair, [{ label: "Total", count: repair.count }], note, true)
+      makeBarRow(repairLabel(repair), repair.count, maxRepair, [{ label: "Total", count: repair.count }], "", true)
     );
   }
 }
 
-function repairsByKey(stats, key) {
-  return stats.repairs.find((repair) => repair.key === key);
-}
-
 let allRecords = [];
+// Pecas faltantes do historico (por timestamp), para registros dos
+// indicadores gravados antes de guardarem as pecas.
+let historyParts = new Map();
+
+function indexHistoryParts(history) {
+  historyParts = new Map(
+    (history || []).filter((entry) => Array.isArray(entry.parts)).map((entry) => [entry.timestamp, entry.parts])
+  );
+}
 
 periodSelect.addEventListener("change", () => render(allRecords));
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[VIN_STATS_KEY]) {
-    allRecords = changes[VIN_STATS_KEY].newValue || [];
-    render(allRecords);
-  }
+  if (area !== "local") return;
+  if (changes[VIN_STORAGE_KEY]) indexHistoryParts(changes[VIN_STORAGE_KEY].newValue);
+  if (changes[VIN_STATS_KEY]) allRecords = changes[VIN_STATS_KEY].newValue || [];
+  if (changes[VIN_STORAGE_KEY] || changes[VIN_STATS_KEY]) render(allRecords);
 });
 
 (async function iniciar() {
+  indexHistoryParts(await vinGetHistory());
   allRecords = await vinStatsGetAll();
   render(allRecords);
 })();
