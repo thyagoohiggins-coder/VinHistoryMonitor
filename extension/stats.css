@@ -40,7 +40,7 @@ body {
   display: block;
   font-size: 22px;
   font-weight: 700;
-  color: #0b8043;
+  color: #111111;
   margin-top: 2px;
 }
 
@@ -102,7 +102,7 @@ body {
 }
 
 .single .bar-seg {
-  background: #0b8043;
+  background: #111111;
 }
 
 
