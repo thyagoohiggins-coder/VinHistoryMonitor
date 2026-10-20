@@ -23,6 +23,42 @@ function formatTimestamp(timestamp) {
   });
 }
 
+// Texto copiado de um VIN: hora, modelo/cor, reparo e/ou cripple.
+function buildCopyText(entry) {
+  const hora = new Date(entry.timestamp).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = Array.isArray(entry.parts) ? entry.parts : [];
+  const repair = (entry.repair || "").trim();
+  const tipo =
+    repair && parts.length > 0 ? "Reparo + Cripple" : repair ? "Reparo" : parts.length > 0 ? "Cripple" : "";
+
+  const lines = [`VIN: ${entry.vin}`, `Hora: ${hora}`];
+  const modeloCor = [entry.model && `Modelo: ${entry.model}`, entry.color && `Cor: ${entry.color}`].filter(Boolean);
+  if (modeloCor.length > 0) lines.push(modeloCor.join(" | "));
+  if (tipo) lines.push(`Tipo: ${tipo}`);
+  if (repair) lines.push(`Reparo: ${repair}`);
+  if (parts.length > 0) lines.push(`Cripple: ${parts.join(", ")}`);
+  return lines.join("\n");
+}
+
+async function copyEntry(entry, button) {
+  try {
+    await navigator.clipboard.writeText(buildCopyText(entry));
+    button.textContent = "\u2714";
+    button.title = "Copiado!";
+  } catch (error) {
+    button.textContent = "\u2716";
+    button.title = "Nao foi possivel copiar";
+  }
+  setTimeout(() => {
+    button.textContent = "\u{1F4CB}";
+    button.title = "Copiar dados do VIN";
+  }, 1500);
+}
+
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
 
@@ -101,6 +137,14 @@ function render(history) {
     if (repeat) {
       vinRow.appendChild(vinBuildLaunchTag(repeat.ordinal));
     }
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "copy-entry-btn";
+    copyBtn.title = "Copiar dados do VIN";
+    copyBtn.setAttribute("aria-label", "Copiar dados do VIN");
+    copyBtn.textContent = "\u{1F4CB}";
+    copyBtn.addEventListener("click", () => copyEntry(entry, copyBtn));
+    vinRow.appendChild(copyBtn);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-entry-btn";
