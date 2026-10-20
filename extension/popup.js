@@ -5,6 +5,8 @@ const countLabelEl = document.getElementById("countLabel");
 const shiftCountsEl = document.getElementById("shiftCounts");
 const summaryEl = document.getElementById("summary");
 const toggleSummaryBtn = document.getElementById("toggleSummaryBtn");
+const vinSearchEl = document.getElementById("vinSearch");
+const noMatchEl = document.getElementById("noMatch");
 
 let currentShifts = VIN_DEFAULT_SHIFTS;
 let currentHistory = [];
@@ -66,11 +68,15 @@ function render(history) {
   countNumberEl.textContent = String(count);
   countLabelEl.textContent = `VIN${count === 1 ? "" : "s"} registrado${count === 1 ? "" : "s"}`;
 
+  const termo = vinCompareKey(vinSearchEl.value);
+  const sorted = [...history]
+    .filter((entry) => !termo || vinCompareKey(entry.vin).includes(termo))
+    .sort((a, b) => b.timestamp - a.timestamp);
+  noMatchEl.style.display = !isEmpty && sorted.length === 0 ? "block" : "none";
+
   if (isEmpty) {
     return;
   }
-
-  const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
 
   for (const entry of sorted) {
     const repeat = repeats.get(entry.timestamp);
@@ -133,6 +139,8 @@ function setSummaryVisible(visible) {
   summaryEl.classList.toggle("hidden", !visible);
   toggleSummaryBtn.textContent = visible ? "Ocultar resumo" : "Mostrar resumo";
 }
+
+vinSearchEl.addEventListener("input", () => render(currentHistory));
 
 toggleSummaryBtn.addEventListener("click", () => {
   setSummaryVisible(summaryEl.classList.contains("hidden"));

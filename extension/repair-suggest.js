@@ -6,6 +6,8 @@ const REPAIR_LABEL_REGEX = /\bPRINCIPAL\s+REPAROS?\b/i;
 let repairDb = [];
 let repairInput = null;
 let repairLearned = "";
+// Reparos (separados por ";") ja contados no VIN atual: "ts|CHAVE".
+const repairLearnedParts = new Set();
 let repairItems = [];
 let repairActive = -1;
 let repairBox = null;
@@ -146,12 +148,26 @@ function highlightRepair(index) {
   });
 }
 
+// Varios reparos no mesmo campo ficam separados por ";". As sugestoes olham
+// so o trecho que esta sendo digitado (depois do ultimo ";").
+const REPAIR_SEPARATOR = ";";
+
+function splitRepairText(text) {
+  const cut = text.lastIndexOf(REPAIR_SEPARATOR);
+  return cut === -1
+    ? { before: "", current: text }
+    : { before: text.slice(0, cut + 1), current: text.slice(cut + 1) };
+}
+
 function pickRepair(index) {
   const item = repairItems[index];
   if (!item || !repairInput) {
     return;
   }
-  setRepairValue(repairInput, item.text);
+  // Mantem o que ja estava escrito antes do ";" e troca so o trecho atual.
+  const { before } = splitRepairText(getFieldValue(repairInput));
+  const prefix = before.replace(/\s+$/, "");
+  setRepairValue(repairInput, prefix ? `${prefix} ${item.text}` : item.text);
   hideRepairBox();
   repairInput.focus();
 }
@@ -186,7 +202,7 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  const query = getFieldValue(repairInput);
+  const query = splitRepairText(getFieldValue(repairInput)).current;
   repairItems = repairSuggest(repairDb, query);
   if (repairItems.length === 0) {
     // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
@@ -233,7 +249,14 @@ function learnRepair() {
     return;
   }
   repairLearned = learnedKey;
-  repairLearn(text);
+  // Cada reparo separado por ";" entra no banco sozinho, uma vez por VIN.
+  for (const part of text.split(REPAIR_SEPARATOR)) {
+    const partKey = `${currentEntryTimestamp}|${repairNormalize(part)}`;
+    if (part.trim() && !repairLearnedParts.has(partKey)) {
+      repairLearnedParts.add(partKey);
+      repairLearn(part);
+    }
+  }
 
   // O reparo fica junto do VIN (lista) e tambem entra nos indicadores.
   if (currentEntryTimestamp !== null) {

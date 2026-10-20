@@ -76,7 +76,7 @@ function renderRepairs(db) {
   clearRepairsBtn.disabled = db.length === 0;
 
   repairListEl.innerHTML = "";
-  const sorted = [...db].sort((a, b) => b.count - a.count || b.lastUsed - a.lastUsed);
+  const sorted = [...db].sort((a, b) => a.text.localeCompare(b.text, "pt-BR", { sensitivity: "base" }));
   for (const item of sorted) {
     const li = document.createElement("li");
     li.className = "repair-item";
