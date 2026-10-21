@@ -139,8 +139,13 @@ function repairTokenScore(queryToken, candidateToken, isLast) {
   return 0;
 }
 
-// Reparos parecidos com o texto digitado, melhores primeiro.
-function repairSuggest(db, query, limit = 6) {
+// Reparos parecidos com o texto digitado, melhores primeiro. Ordem:
+// 1) o reparo comeca com o texto (os mais curtos/proximos primeiro);
+// 2) alguma palavra do reparo comeca com o texto;
+// 3) o texto aparece no meio do reparo;
+// 4) palavras parecidas (tolera erro de digitacao).
+// Dentro de cada grupo, os mais usados e recentes vem antes.
+function repairSuggest(db, query, limit = 8) {
   const queryNorm = repairNormalize(query);
   if (queryNorm.length < 2) {
     return [];
@@ -153,12 +158,15 @@ function repairSuggest(db, query, limit = 6) {
       continue;
     }
 
-    const candTokens = item.key.split(" ");
     let score = 0;
-
     if (item.key.startsWith(queryNorm)) {
-      score = 3;
+      score = 10 + (queryNorm.length / item.key.length) * 2;
+    } else if (item.key.includes(` ${queryNorm}`)) {
+      score = 8 + (queryNorm.length / item.key.length);
+    } else if (queryNorm.length >= 3 && item.key.includes(queryNorm)) {
+      score = 6;
     } else {
+      const candTokens = item.key.split(" ");
       let total = 0;
       for (let i = 0; i < queryTokens.length; i += 1) {
         const isLast = i === queryTokens.length - 1;
@@ -173,7 +181,7 @@ function repairSuggest(db, query, limit = 6) {
       if (coverage < 0.5) {
         continue;
       }
-      score = coverage * 2;
+      score = coverage * 5;
     }
 
     // Desempate: reparos mais usados e usados recentemente aparecem antes.
