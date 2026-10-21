@@ -40,6 +40,8 @@ const VIN_DEFAULT_SETTINGS = {
   // Modo turno: a lista mostra so o turno atual e tudo e apagado no fim de
   // cada turno (vale para todos os turnos).
   shiftOnlyMode: false,
+  // Sugestoes de modelo/prefixo ao clicar no campo VIN.
+  prefixSuggestEnabled: true,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 

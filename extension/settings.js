@@ -47,6 +47,9 @@ purgeToggle.addEventListener("change", async () => {
   }
 });
 
+const prefixToggle = document.getElementById("prefixToggle");
+prefixToggle.addEventListener("change", () => vinSetSettings({ prefixSuggestEnabled: prefixToggle.checked }));
+
 const shiftOnlyToggle = document.getElementById("shiftOnlyToggle");
 shiftOnlyToggle.addEventListener("change", async () => {
   await vinSetSettings({ shiftOnlyMode: shiftOnlyToggle.checked });
@@ -308,6 +311,7 @@ async function iniciar() {
   purgeToggle.checked = settings.autoPurgeEnabled;
   showDeleteToggle.checked = settings.showDeleteButton !== false;
   shiftOnlyToggle.checked = settings.shiftOnlyMode === true;
+  prefixToggle.checked = settings.prefixSuggestEnabled !== false;
   renderShiftPurge(settings);
   renderPrefixes(await vinGetPrefixes());
   frozen = settings.repairFrozen === true;
