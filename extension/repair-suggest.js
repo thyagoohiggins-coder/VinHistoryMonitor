@@ -6,7 +6,7 @@ const REPAIR_LABEL_REGEX = /\bPRINCIPAL\s+REPAROS?\b/i;
 let repairDb = [];
 let repairInput = null;
 let repairLearned = "";
-// Reparos (separados por ";") ja contados no VIN atual: "ts|CHAVE".
+// Reparos (separados por " / ") ja contados no VIN atual: "ts|CHAVE".
 const repairLearnedParts = new Set();
 let repairItems = [];
 let repairActive = -1;
@@ -148,15 +148,17 @@ function highlightRepair(index) {
   });
 }
 
-// Varios reparos no mesmo campo ficam separados por ";". As sugestoes olham
-// so o trecho que esta sendo digitado (depois do ultimo ";").
-const REPAIR_SEPARATOR = ";";
+// A sugestao escolhida sempre soma ao que ja esta na caixa, separada por
+// " / ". As sugestoes olham so o que foi digitado depois da ultima escolha.
+const REPAIR_JOINER = " / ";
+let repairPickedValue = "";
 
 function splitRepairText(text) {
-  const cut = text.lastIndexOf(REPAIR_SEPARATOR);
-  return cut === -1
-    ? { before: "", current: text }
-    : { before: text.slice(0, cut + 1), current: text.slice(cut + 1) };
+  if (repairPickedValue && text.startsWith(repairPickedValue)) {
+    return { before: repairPickedValue, current: text.slice(repairPickedValue.length) };
+  }
+  repairPickedValue = "";
+  return { before: "", current: text };
 }
 
 function pickRepair(index) {
@@ -164,10 +166,15 @@ function pickRepair(index) {
   if (!item || !repairInput) {
     return;
   }
-  // Mantem o que ja estava escrito antes do ";" e troca so o trecho atual.
-  const { before } = splitRepairText(getFieldValue(repairInput));
-  const prefix = before.replace(/\s+$/, "");
-  setRepairValue(repairInput, prefix ? `${prefix} ${item.text}` : item.text);
+  const { before, current } = splitRepairText(getFieldValue(repairInput));
+  // Um trecho que a sugestao so completa (ex.: "mola" -> "Mola RR LH FP.")
+  // e trocado; texto proprio do usuario fica e a sugestao entra depois.
+  const typed = current.trim();
+  const completes = !typed || repairNormalize(item.text).startsWith(repairNormalize(typed));
+  const kept = [before.trim(), completes ? "" : typed].filter(Boolean);
+  const value = [...kept, item.text].join(REPAIR_JOINER);
+  setRepairValue(repairInput, value);
+  repairPickedValue = value;
   hideRepairBox();
   repairInput.focus();
 }
@@ -202,8 +209,10 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  const query = splitRepairText(getFieldValue(repairInput)).current;
-  repairItems = repairSuggest(repairDb, query);
+  const { before, current: query } = splitRepairText(getFieldValue(repairInput));
+  // Reparos que ja estao na caixa nao aparecem de novo.
+  const used = new Set(before.split(REPAIR_JOINER).map(repairNormalize));
+  repairItems = repairSuggest(repairDb, query).filter((item) => !used.has(item.key));
   if (repairItems.length === 0) {
     // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
     if (repairNormalize(query).length >= 2) {
@@ -249,8 +258,8 @@ function learnRepair() {
     return;
   }
   repairLearned = learnedKey;
-  // Cada reparo separado por ";" entra no banco sozinho, uma vez por VIN.
-  for (const part of text.split(REPAIR_SEPARATOR)) {
+  // Cada reparo separado por " / " entra no banco sozinho, uma vez por VIN.
+  for (const part of text.split(REPAIR_JOINER)) {
     const partKey = `${currentEntryTimestamp}|${repairNormalize(part)}`;
     if (part.trim() && !repairLearnedParts.has(partKey)) {
       repairLearnedParts.add(partKey);
@@ -277,6 +286,7 @@ function attachRepairInput(input) {
   input.addEventListener("input", () => {
     if (!getFieldValue(input).trim()) {
       repairLearned = "";
+      repairPickedValue = "";
     }
     updateRepairSuggestions();
   });
