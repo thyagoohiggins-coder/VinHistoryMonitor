@@ -47,6 +47,9 @@ purgeToggle.addEventListener("change", async () => {
   }
 });
 
+const repeatNoticeToggle = document.getElementById("repeatNoticeToggle");
+repeatNoticeToggle.addEventListener("change", () => vinSetSettings({ repeatNoticeEnabled: repeatNoticeToggle.checked }));
+
 const prefixToggle = document.getElementById("prefixToggle");
 prefixToggle.addEventListener("change", () => vinSetSettings({ prefixSuggestEnabled: prefixToggle.checked }));
 
@@ -312,6 +315,7 @@ async function iniciar() {
   showDeleteToggle.checked = settings.showDeleteButton !== false;
   shiftOnlyToggle.checked = settings.shiftOnlyMode === true;
   prefixToggle.checked = settings.prefixSuggestEnabled !== false;
+  repeatNoticeToggle.checked = settings.repeatNoticeEnabled !== false;
   renderShiftPurge(settings);
   renderPrefixes(await vinGetPrefixes());
   frozen = settings.repairFrozen === true;

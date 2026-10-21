@@ -69,6 +69,9 @@ async function saveVin(rawValue) {
 // anteriores): avisa ao lado do campo quantas vezes ele ja foi inserido.
 async function announceRepeatedVin(vin, timestamp) {
   document.getElementById("vin-monitor-repeat-notice")?.remove();
+  if ((await vinGetSettings()).repeatNoticeEnabled === false) {
+    return;
+  }
   const key = vinCompareKey(vin);
   const [history, stats] = await Promise.all([vinGetHistory(), vinStatsGetAll()]);
   const vezes = new Set();

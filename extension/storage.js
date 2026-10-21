@@ -42,6 +42,8 @@ const VIN_DEFAULT_SETTINGS = {
   shiftOnlyMode: false,
   // Sugestoes de modelo/prefixo ao clicar no campo VIN.
   prefixSuggestEnabled: true,
+  // Aviso no formulario quando o VIN digitado ja foi lancado antes.
+  repeatNoticeEnabled: true,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
