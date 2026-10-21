@@ -76,15 +76,39 @@ function computeStats(records, since, partsByTs = new Map(), until = Infinity) {
 }
 
 // ---------------------------------------------------------------- tela
-function untilFor(period) {
-  return period === "yesterday" ? vinCycleStart(Date.now(), VIN_DEFAULT_SHIFTS) : Infinity;
+// Periodos por turno: o atual, o anterior e a ultima ocorrencia de cada um.
+function periodRange(period, agora = Date.now()) {
+  const shifts = VIN_DEFAULT_SHIFTS;
+  if (period === "all") return { since: 0, until: Infinity };
+  const atual = vinShiftOccurrence(agora, shifts);
+  if (period === "current") return atual ? { since: atual.start, until: atual.end } : { since: agora, until: Infinity };
+  if (period === "previous") {
+    const anterior = atual ? vinShiftOccurrence(atual.start - 1, shifts) : null;
+    return anterior ? { since: anterior.start, until: anterior.end } : { since: agora, until: agora };
+  }
+  // Ultima ocorrencia (ja iniciada) do turno escolhido.
+  const shift = shifts.find((item) => item.id === period);
+  for (let t = agora; shift && t > agora - 2 * 86400000; ) {
+    const occ = vinShiftOccurrence(t, shifts);
+    if (!occ) break;
+    if (occ.shift.id === shift.id) return { since: occ.start, until: occ.end };
+    t = occ.start - 1;
+  }
+  return { since: agora, until: agora };
 }
 
-function sinceFor(period) {
-  if (period === "all") return 0;
-  if (period === "today") return vinCycleStart(Date.now(), VIN_DEFAULT_SHIFTS);
-  if (period === "yesterday") return vinCycleStart(vinCycleStart(Date.now(), VIN_DEFAULT_SHIFTS) - 1, VIN_DEFAULT_SHIFTS);
-  return Date.now() - Number(period) * 86400000;
+function fillPeriodOptions() {
+  const atual = vinShiftOccurrence(Date.now(), VIN_DEFAULT_SHIFTS);
+  const anterior = atual ? vinShiftOccurrence(atual.start - 1, VIN_DEFAULT_SHIFTS) : null;
+  const escolhido = periodSelect.value || "current";
+  periodSelect.innerHTML = "";
+  periodSelect.add(new Option(`Turno atual${atual ? ` (${atual.shift.label})` : ""}`, "current"));
+  periodSelect.add(new Option(`Turno anterior${anterior ? ` (${anterior.shift.label})` : ""}`, "previous"));
+  for (const shift of VIN_DEFAULT_SHIFTS) {
+    periodSelect.add(new Option(`Ultimo ${shift.label} (${shift.start}–${shift.end})`, shift.id));
+  }
+  periodSelect.add(new Option("Tudo", "all"));
+  periodSelect.value = escolhido;
 }
 
 function makeKpi(label, value, italic) {
@@ -154,7 +178,8 @@ function repairLabel(repair) {
 }
 
 function render(records) {
-  const stats = computeStats(records, sinceFor(periodSelect.value), historyParts, untilFor(periodSelect.value));
+  const range = periodRange(periodSelect.value);
+  const stats = computeStats(records, range.since, historyParts, range.until);
 
   kpisEl.innerHTML = "";
   const topModel = stats.models[0];
@@ -210,6 +235,11 @@ function indexHistoryParts(history) {
 }
 
 periodSelect.addEventListener("change", () => render(allRecords));
+// Os nomes "turno atual/anterior" mudam com a hora: atualiza a cada minuto.
+setInterval(() => {
+  fillPeriodOptions();
+  render(allRecords);
+}, 60000);
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
@@ -219,6 +249,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 (async function iniciar() {
+  fillPeriodOptions();
   indexHistoryParts(await vinGetHistory());
   allRecords = await vinStatsGetAll();
   render(allRecords);

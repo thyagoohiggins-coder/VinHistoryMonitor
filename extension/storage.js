@@ -265,6 +265,9 @@ function vinCurrentShift(settings, agora = Date.now()) {
 // Retorna o historico atual.
 async function vinPurgeExpired() {
   const settings = await vinGetSettings();
+  if (settings.shiftOnlyMode) {
+    await vinPurgeStatsByShift(settings);
+  }
   // So grava quando ha algo vencido (evita escritas e eventos desnecessarios).
   const history = await vinGetHistory();
   const kept = vinApplyPurge(history, settings);
@@ -272,6 +275,32 @@ async function vinPurgeExpired() {
     return history;
   }
   return vinMutateHistory((current) => vinApplyPurge(current, settings));
+}
+
+// Modo turno: os indicadores tambem sao apagados no fim de cada turno.
+async function vinPurgeStatsByShift(settings, agora = Date.now()) {
+  const vigente = (record) => {
+    const shift = vinShiftForTimestamp(record.ts, settings.shifts);
+    return !shift || vinShiftOccurrenceEnd(record.ts, shift) > agora;
+  };
+  const stats = await vinStatsGetAll();
+  if (stats.every(vigente)) {
+    return;
+  }
+  await vinStatsMutate((current) => current.filter(vigente));
+}
+
+// Ocorrencia do turno que contem `timestamp`: { shift, start, end } (ms), ou null.
+function vinShiftOccurrence(timestamp, shifts) {
+  const shift = vinShiftForTimestamp(timestamp, shifts);
+  if (!shift) {
+    return null;
+  }
+  const end = vinShiftOccurrenceEnd(timestamp, shift);
+  const inicio = vinParseTime(shift.start);
+  const fim = vinParseTime(shift.end);
+  const duracao = ((fim - inicio + 1440) % 1440 || 1440) * 60000;
+  return { shift, start: end - duracao, end };
 }
 
 // Atualiza modelo, cor e pecas faltantes de um registro ja gravado.
