@@ -122,7 +122,7 @@ function showRepeatBadge(input, vezes) {
   repeatBadge.textContent = `${vezes}º lançamento – veículo retornou ou o VIN foi repetido`;
   repeatBadge.style.cssText =
     "position:fixed;z-index:2147483647;pointer-events:none;box-sizing:border-box;" +
-    "padding:2px 8px;border-radius:10px;background:#f59e0b;color:#fff;" +
+    "padding:2px 8px;border-radius:10px;background:#7c3aed;color:#fff;" +
     "font:700 11px/16px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2);";
   document.documentElement.appendChild(repeatBadge);
   // Campo estreito: a etiqueta nao passa da borda esquerda dele.
@@ -132,7 +132,7 @@ function showRepeatBadge(input, vezes) {
   const largura = repeatBadge.offsetWidth;
   repeatBadge.style.left = `${Math.max(rect.right - largura - 8, rect.left + 8)}px`;
   repeatBadge.style.top = `${rect.top + (rect.height - 20) / 2}px`;
-  repeatBadgeTimer = setTimeout(hideRepeatBadge, 3500);
+  repeatBadgeTimer = setTimeout(hideRepeatBadge, 3000);
 }
 
 function checkRepeatedVin(input) {
@@ -155,7 +155,18 @@ document.addEventListener(
   },
   true
 );
-window.addEventListener("scroll", hideRepeatBadge, true);
+// Rolar a pagina acompanha o campo (em vez de esconder a etiqueta antes da hora).
+window.addEventListener(
+  "scroll",
+  () => {
+    if (!repeatBadge || !currentVinInput?.isConnected) return;
+    const rect = currentVinInput.getBoundingClientRect();
+    const largura = repeatBadge.offsetWidth;
+    repeatBadge.style.left = `${Math.max(rect.right - largura - 8, rect.left + 8)}px`;
+    repeatBadge.style.top = `${rect.top + (rect.height - 20) / 2}px`;
+  },
+  true
+);
 
 // Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
 // clicar numa caixa, atualiza o registro do VIN atual.
