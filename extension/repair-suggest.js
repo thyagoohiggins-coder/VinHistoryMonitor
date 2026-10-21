@@ -153,13 +153,27 @@ function highlightRepair(index) {
 let repairPickedValue = "";
 let repairPickedTexts = [];
 
+// Separadores entre reparos digitados a mao: "falha no ABS, fluido de freio".
+const REPAIR_SEPARATOR_REGEX = /[,;\n]/g;
+
 function splitRepairText(text) {
+  let before = "";
+  let current = text;
   if (repairPickedValue && text.startsWith(repairPickedValue)) {
-    return { before: repairPickedValue, current: text.slice(repairPickedValue.length) };
+    before = repairPickedValue;
+    current = text.slice(repairPickedValue.length);
+  } else {
+    repairPickedValue = "";
+    repairPickedTexts = [];
   }
-  repairPickedValue = "";
-  repairPickedTexts = [];
-  return { before: "", current: text };
+  // O trecho em digitacao comeca depois da ultima virgula (ou ; / quebra de linha).
+  let cut = -1;
+  for (const match of current.matchAll(REPAIR_SEPARATOR_REGEX)) cut = match.index;
+  if (cut !== -1) {
+    before += current.slice(0, cut + 1);
+    current = current.slice(cut + 1);
+  }
+  return { before, current };
 }
 
 function pickRepair(index) {
@@ -234,15 +248,17 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  const { current: query } = splitRepairText(getFieldValue(repairInput));
-  // Reparos que ja estao na caixa nao aparecem de novo.
+  const { before, current: query } = splitRepairText(getFieldValue(repairInput));
+  // Reparos que ja estao na caixa (escolhidos ou digitados) nao aparecem de novo.
   const used = new Set(repairPickedTexts.map(repairNormalize));
+  const beforeNorm = ` ${repairNormalize(before)} `;
+  const isUsed = (item) => used.has(item.key) || beforeNorm.includes(` ${item.key} `);
   // Busca pelo trecho digitado; sem resultado, tenta so as ultimas palavras
   // (ex.: "Prisioneiro solto, luz" sugere pelo "luz").
   const words = query.trim().split(/\s+/);
   repairItems = [];
   for (let i = 0; i < words.length && repairItems.length === 0; i += 1) {
-    repairItems = repairSuggest(repairDb, words.slice(i).join(" ")).filter((item) => !used.has(item.key));
+    repairItems = repairSuggest(repairDb, words.slice(i).join(" ")).filter((item) => !isUsed(item));
   }
   if (repairItems.length === 0) {
     // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
