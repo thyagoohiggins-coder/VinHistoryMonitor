@@ -449,15 +449,15 @@ h1 {
   border-color: #d5d5d5;
 }
 
+/* Assinatura: so no rodape da pagina de configuracoes. */
 .signature {
-  position: fixed;
-  right: 24px;
-  bottom: 6px;
+  margin: 28px 0 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+  text-align: right;
   font-family: "Segoe Script", "Brush Script MT", cursive;
-  font-size: 7px;
-  line-height: 1;
+  font-size: 11px;
   color: #000;
-  pointer-events: none;
 }
 
 .page-nav {
