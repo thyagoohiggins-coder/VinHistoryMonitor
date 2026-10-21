@@ -6,7 +6,7 @@ const REPAIR_LABEL_REGEX = /\bPRINCIPAL\s+REPAROS?\b/i;
 let repairDb = [];
 let repairInput = null;
 let repairLearned = "";
-// Reparos (separados por " / ") ja contados no VIN atual: "ts|CHAVE".
+// Reparos ja contados no VIN atual: "ts|CHAVE".
 const repairLearnedParts = new Set();
 let repairItems = [];
 let repairActive = -1;
@@ -148,16 +148,17 @@ function highlightRepair(index) {
   });
 }
 
-// A sugestao escolhida sempre soma ao que ja esta na caixa, separada por
-// " / ". As sugestoes olham so o que foi digitado depois da ultima escolha.
-const REPAIR_JOINER = " / ";
+// A sugestao escolhida sempre soma ao que ja esta na caixa: completa o que
+// estava sendo digitado depois da ultima escolha, sem separador.
 let repairPickedValue = "";
+let repairPickedTexts = [];
 
 function splitRepairText(text) {
   if (repairPickedValue && text.startsWith(repairPickedValue)) {
     return { before: repairPickedValue, current: text.slice(repairPickedValue.length) };
   }
   repairPickedValue = "";
+  repairPickedTexts = [];
   return { before: "", current: text };
 }
 
@@ -166,15 +167,27 @@ function pickRepair(index) {
   if (!item || !repairInput) {
     return;
   }
-  const { before, current } = splitRepairText(getFieldValue(repairInput));
-  // Um trecho que a sugestao so completa (ex.: "mola" -> "Mola RR LH FP.")
-  // e trocado; texto proprio do usuario fica e a sugestao entra depois.
+  const text = getFieldValue(repairInput);
+  const { current } = splitRepairText(text);
+  // As ultimas palavras digitadas que a sugestao completa (ex.: "mola" ->
+  // "Mola RR LH FP.") sao trocadas; o resto fica e a sugestao entra no fim.
   const typed = current.trim();
-  const completes = !typed || repairNormalize(item.text).startsWith(repairNormalize(typed));
-  const kept = [before.trim(), completes ? "" : typed].filter(Boolean);
-  const value = [...kept, item.text].join(REPAIR_JOINER);
-  setRepairValue(repairInput, value);
+  const head = text.slice(0, text.length - current.length) + current.slice(0, current.length - current.trimStart().length);
+  const words = typed.split(/(\s+)/);
+  let value = null;
+  for (let i = 0; i < words.length && value === null; i += 2) {
+    const tail = words.slice(i).join("");
+    if (tail && repairNormalize(item.text).startsWith(repairNormalize(tail))) {
+      value = head + words.slice(0, i).join("") + item.text;
+    }
+  }
+  if (value === null) {
+    value = text + (text === "" || /\s$/.test(text) ? "" : " ") + item.text;
+  }
+  // Antes de gravar: o "change" disparado ja aprende com a escolha.
   repairPickedValue = value;
+  repairPickedTexts.push(item.text);
+  setRepairValue(repairInput, value);
   hideRepairBox();
   repairInput.focus();
 }
@@ -209,10 +222,16 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  const { before, current: query } = splitRepairText(getFieldValue(repairInput));
+  const { current: query } = splitRepairText(getFieldValue(repairInput));
   // Reparos que ja estao na caixa nao aparecem de novo.
-  const used = new Set(before.split(REPAIR_JOINER).map(repairNormalize));
-  repairItems = repairSuggest(repairDb, query).filter((item) => !used.has(item.key));
+  const used = new Set(repairPickedTexts.map(repairNormalize));
+  // Busca pelo trecho digitado; sem resultado, tenta so as ultimas palavras
+  // (ex.: "Prisioneiro solto, luz" sugere pelo "luz").
+  const words = query.trim().split(/\s+/);
+  repairItems = [];
+  for (let i = 0; i < words.length && repairItems.length === 0; i += 1) {
+    repairItems = repairSuggest(repairDb, words.slice(i).join(" ")).filter((item) => !used.has(item.key));
+  }
   if (repairItems.length === 0) {
     // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
     if (repairNormalize(query).length >= 2) {
@@ -258,10 +277,13 @@ function learnRepair() {
     return;
   }
   repairLearned = learnedKey;
-  // Cada reparo separado por " / " entra no banco sozinho, uma vez por VIN.
-  for (const part of text.split(REPAIR_JOINER)) {
+  // Com sugestoes escolhidas, cada uma conta sozinha no banco; sem nenhuma,
+  // o texto inteiro e aprendido. Cada reparo conta uma vez por VIN.
+  splitRepairText(getFieldValue(repairInput));
+  const learned = repairPickedTexts.length > 0 ? repairPickedTexts : [text];
+  for (const part of learned) {
     const partKey = `${currentEntryTimestamp}|${repairNormalize(part)}`;
-    if (part.trim() && !repairLearnedParts.has(partKey)) {
+    if (!repairLearnedParts.has(partKey)) {
       repairLearnedParts.add(partKey);
       repairLearn(part);
     }
@@ -287,6 +309,7 @@ function attachRepairInput(input) {
     if (!getFieldValue(input).trim()) {
       repairLearned = "";
       repairPickedValue = "";
+      repairPickedTexts = [];
     }
     updateRepairSuggestions();
   });
