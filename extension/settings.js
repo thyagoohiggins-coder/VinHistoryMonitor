@@ -71,6 +71,66 @@ function renderShiftPurge(settings) {
   }
 }
 
+// ------------------------------------------------- modelos e prefixos
+const prefixListEl = document.getElementById("prefixList");
+const prefixStatusEl = document.getElementById("prefixStatus");
+
+function addPrefixRow(item = { model: "", prefix: "" }) {
+  const row = document.createElement("div");
+  row.className = "prefix-row";
+
+  const model = document.createElement("input");
+  model.type = "text";
+  model.className = "prefix-model";
+  model.placeholder = "Modelo (ex.: S202 (Uni-T))";
+  model.maxLength = 60;
+  model.value = item.model;
+
+  const prefix = document.createElement("input");
+  prefix.type = "text";
+  prefix.className = "prefix-code";
+  prefix.placeholder = "Prefixo (ex.: 95PLDL61DVB)";
+  prefix.maxLength = 17;
+  prefix.value = item.prefix;
+  prefix.addEventListener("input", () => {
+    prefix.value = prefix.value.toUpperCase().replace(/\s+/g, "");
+  });
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "entry-btn entry-btn-delete";
+  del.textContent = "Remover";
+  del.addEventListener("click", () => row.remove());
+
+  for (const input of [model, prefix]) {
+    input.addEventListener("input", () => {
+      prefixStatusEl.textContent = "Alteracoes nao salvas.";
+    });
+  }
+
+  row.append(model, prefix, del);
+  prefixListEl.appendChild(row);
+  return row;
+}
+
+function renderPrefixes(list) {
+  prefixListEl.innerHTML = "";
+  list.forEach((item) => addPrefixRow(item));
+}
+
+document.getElementById("prefixAddBtn").addEventListener("click", () => {
+  addPrefixRow().querySelector("input").focus();
+});
+
+document.getElementById("prefixSaveBtn").addEventListener("click", async () => {
+  const list = [...prefixListEl.querySelectorAll(".prefix-row")].map((row) => ({
+    model: row.querySelector(".prefix-model").value,
+    prefix: row.querySelector(".prefix-code").value,
+  }));
+  renderPrefixes(await vinSetPrefixes(list));
+  prefixStatusEl.textContent = "Modelos salvos.";
+});
+
 dedupeNowBtn.addEventListener("click", async () => {
   const history = await vinGetHistory();
   const redundant = vinCountRedundant(history);
@@ -242,6 +302,7 @@ async function iniciar() {
   purgeToggle.checked = settings.autoPurgeEnabled;
   showDeleteToggle.checked = settings.showDeleteButton !== false;
   renderShiftPurge(settings);
+  renderPrefixes(await vinGetPrefixes());
   frozen = settings.repairFrozen === true;
   applyFrozenState();
   setUnlocked(false);

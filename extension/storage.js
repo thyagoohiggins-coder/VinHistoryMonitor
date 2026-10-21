@@ -8,6 +8,14 @@ const VIN_SETTINGS_KEY = "vinSettings";
 const VIN_STATS_KEY = "vinStats";
 const VIN_STATS_MAX = 20000;
 const VIN_PIN_KEY = "vinPinHash";
+// Modelos e prefixos de VIN sugeridos ao clicar no campo VIN do formulario.
+const VIN_PREFIX_KEY = "vinPrefixes";
+const VIN_DEFAULT_PREFIXES = [
+  { model: "S202 (Uni-T)", prefix: "95PLDL61DVB" },
+  { model: "C655 (CS55)", prefix: "95PJCL61DVB" },
+  { model: "C928 (CS75)", prefix: "95PKDM81DVB" },
+  { model: "T1E ADAS (Tiggo 7)", prefix: "95PEEL61DVB" },
+];
 const VIN_DEFAULT_PIN = "0000";
 // Horarios FIXOS dos turnos (nao sao configuraveis).
 const VIN_DEFAULT_SHIFTS = [
@@ -713,4 +721,21 @@ function vinBuildEntryButton(kind, onClick) {
   button.title = kind === "copy" ? "Copiar dados do VIN" : "Apagar este VIN";
   button.addEventListener("click", () => onClick(button));
   return button;
+}
+
+// ---------------------------------------------------------------------------
+// Prefixos de VIN por modelo
+// ---------------------------------------------------------------------------
+
+async function vinGetPrefixes() {
+  const { [VIN_PREFIX_KEY]: list } = await chrome.storage.local.get(VIN_PREFIX_KEY);
+  return Array.isArray(list) ? list : VIN_DEFAULT_PREFIXES;
+}
+
+async function vinSetPrefixes(list) {
+  const clean = list
+    .map((item) => ({ model: (item.model || "").trim(), prefix: vinNormalize(item.prefix).replace(/\s+/g, "") }))
+    .filter((item) => item.model || item.prefix);
+  await chrome.storage.local.set({ [VIN_PREFIX_KEY]: clean });
+  return clean;
 }
