@@ -111,7 +111,7 @@ function hideRepeatBadge() {
   repeatBadge = null;
 }
 
-// Etiqueta dentro do campo, no canto direito: "2º lançamento".
+// Etiqueta dentro do campo, no canto direito: "2º lançamento – veículo retornou...".
 function showRepeatBadge(input, vezes) {
   hideRepeatBadge();
   const rect = input.getBoundingClientRect();
@@ -119,17 +119,20 @@ function showRepeatBadge(input, vezes) {
 
   repeatBadge = document.createElement("div");
   repeatBadge.id = "vin-monitor-repeat-notice";
-  repeatBadge.textContent = `${vezes}º lançamento`;
-  repeatBadge.title = "VIN repetido: veículo retornou ou o VIN foi digitado de novo";
+  repeatBadge.textContent = `${vezes}º lançamento – veículo retornou ou o VIN foi repetido`;
   repeatBadge.style.cssText =
     "position:fixed;z-index:2147483647;pointer-events:none;box-sizing:border-box;" +
     "padding:2px 8px;border-radius:10px;background:#f59e0b;color:#fff;" +
     "font:700 11px/16px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2);";
   document.documentElement.appendChild(repeatBadge);
+  // Campo estreito: a etiqueta nao passa da borda esquerda dele.
+  repeatBadge.style.maxWidth = `${Math.max(rect.width - 16, 120)}px`;
+  repeatBadge.style.overflow = "hidden";
+  repeatBadge.style.textOverflow = "ellipsis";
   const largura = repeatBadge.offsetWidth;
-  repeatBadge.style.left = `${rect.right - largura - 8}px`;
+  repeatBadge.style.left = `${Math.max(rect.right - largura - 8, rect.left + 8)}px`;
   repeatBadge.style.top = `${rect.top + (rect.height - 20) / 2}px`;
-  repeatBadgeTimer = setTimeout(hideRepeatBadge, 2500);
+  repeatBadgeTimer = setTimeout(hideRepeatBadge, 3500);
 }
 
 function checkRepeatedVin(input) {
