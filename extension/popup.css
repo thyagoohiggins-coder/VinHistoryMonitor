@@ -406,19 +406,6 @@ h1 {
   padding: 12px;
 }
 
-/* Rodape do proprio popup (altura fixa), abaixo da area com rolagem: nao
-   cobre a barra de rolagem nem o conteudo. */
-.signature {
-  flex: none;
-  padding: 2px 12px 3px;
-  text-align: right;
-  border-top: 1px solid #eee;
-  font-family: "Segoe Script", "Brush Script MT", cursive;
-  font-size: 7px;
-  line-height: 1.2;
-  color: #000;
-}
-
 .top-row {
   display: flex;
   align-items: stretch;

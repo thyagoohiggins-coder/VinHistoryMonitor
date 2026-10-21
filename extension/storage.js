@@ -574,10 +574,6 @@ function vinBuildRepairRow(entry) {
 // lateral ligando os lancamentos do mesmo VIN.
 // ---------------------------------------------------------------------------
 
-const VIN_ORDINALS_F = [
-  "primeira", "segunda", "terceira", "quarta", "quinta",
-  "sexta", "sétima", "oitava", "nona", "décima",
-];
 const VIN_ORDINALS = [
   "Primeiro", "Segundo", "Terceiro", "Quarto", "Quinto",
   "Sexto", "Sétimo", "Oitavo", "Nono", "Décimo",
