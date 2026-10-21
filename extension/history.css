@@ -358,14 +358,26 @@ h1 {
 
 .vin-item .time {
   margin-left: auto;
-  font-size: 13px;
-  font-weight: 700;
-  color: #111111;
-  background: #eef0f3;
-  border: 1px solid #d5d9e0;
-  border-radius: 5px;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  font-size: 12px;
+  font-weight: 400;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  padding: 1px 6px;
   white-space: nowrap;
+}
+
+.time-date {
+  opacity: 0.8;
+}
+
+.time-hour {
+  font-weight: 700;
 }
 
 .vin-item .entry-actions {

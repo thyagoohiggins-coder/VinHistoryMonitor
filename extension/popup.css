@@ -251,14 +251,27 @@ h1 {
 }
 
 .history-item .time {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #111111;
-  background: #eef0f3;
+  margin: 4px 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 400;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
   border-radius: 4px;
   padding: 1px 6px;
-  margin: 4px 0 2px;
+  white-space: nowrap;
+}
+
+.time-date {
+  opacity: 0.8;
+}
+
+.time-hour {
+  font-weight: 700;
 }
 
 .history-item .entry-actions {

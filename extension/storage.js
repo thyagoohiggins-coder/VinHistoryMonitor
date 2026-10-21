@@ -649,6 +649,25 @@ function vinFormatDateTime(timestamp) {
   });
 }
 
+// Etiqueta compacta de data/hora do VIN: "21/10" + hora em destaque.
+function vinBuildTimeBadge(timestamp, tag = "span") {
+  const date = new Date(timestamp);
+  const badge = document.createElement(tag);
+  badge.className = "time";
+  badge.title = vinFormatDateTime(timestamp);
+
+  const dia = document.createElement("span");
+  dia.className = "time-date";
+  dia.textContent = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+
+  const hora = document.createElement("span");
+  hora.className = "time-hour";
+  hora.textContent = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  badge.append(dia, hora);
+  return badge;
+}
+
 // Texto copiado de um VIN: data/hora, modelo/cor, reparo e/ou cripple.
 function vinCopyText(entry) {
   const parts = Array.isArray(entry.parts) ? entry.parts : [];

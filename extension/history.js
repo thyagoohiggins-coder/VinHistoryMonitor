@@ -88,9 +88,7 @@ function buildEntry(entry, repeats) {
     li.appendChild(vinBuildLaunchTag(repeat.ordinal));
   }
 
-  const timeEl = document.createElement("span");
-  timeEl.className = "time";
-  timeEl.textContent = vinFormatDateTime(entry.timestamp);
+  const timeEl = vinBuildTimeBadge(entry.timestamp, "span");
   li.appendChild(timeEl);
 
   const repairRow = vinBuildRepairRow(entry);

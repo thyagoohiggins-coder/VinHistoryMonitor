@@ -102,9 +102,7 @@ function render(history) {
       );
     }
 
-    const timeEl = document.createElement("div");
-    timeEl.className = "time";
-    timeEl.textContent = vinFormatDateTime(entry.timestamp);
+    const timeEl = vinBuildTimeBadge(entry.timestamp, "div");
 
     li.appendChild(vinRow);
     li.appendChild(timeEl);
