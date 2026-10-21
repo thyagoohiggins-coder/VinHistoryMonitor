@@ -17,6 +17,7 @@ let currentShifts = VIN_DEFAULT_SHIFTS;
 let autoPurge = true;
 let showDelete = true;
 let purgeShiftIds = [];
+let currentSettings = VIN_DEFAULT_SETTINGS;
 
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
@@ -47,6 +48,13 @@ function renderShiftCounts(history, shifts) {
 }
 
 function renderPurgeInfo() {
+  if (currentSettings.shiftOnlyMode) {
+    const turno = vinCurrentShift(currentSettings);
+    purgeInfoEl.textContent = turno
+      ? `Modo turno: so o ${turno.label} aparece; tudo e apagado no fim dele (${turno.end}).`
+      : "Modo turno: a lista e apagada no fim de cada turno.";
+    return;
+  }
   const textos = [];
   if (autoPurge) {
     const proxima = new Date(vinNextCycleStart(Date.now(), currentShifts));
@@ -62,6 +70,7 @@ function renderPurgeInfo() {
 }
 
 function applySettings(settings) {
+  currentSettings = { ...settings, shifts: currentShifts };
   autoPurge = settings.autoPurgeEnabled;
   showDelete = settings.showDeleteButton !== false;
   purgeShiftIds = settings.purgeShiftIds || [];
@@ -204,6 +213,10 @@ function renderList() {
   const repeats = vinRepeatInfo(currentHistory);
 
   for (const grupo of vinGroupByShift(filtrado, currentShifts)) {
+    // Modo turno: os outros turnos estao sempre vazios, nao aparecem.
+    if (currentSettings.shiftOnlyMode && grupo.entries.length === 0) {
+      continue;
+    }
     const section = document.createElement("section");
     section.className = "day-shift-group" + (grupo.shift ? ` shift-${grupo.shift.id}` : " no-shift");
 
@@ -257,7 +270,7 @@ window.addEventListener("resize", () => {
 });
 
 function render(history) {
-  currentHistory = history || [];
+  currentHistory = vinVisibleHistory(history || [], currentSettings);
 
   totalCountEl.textContent = `${currentHistory.length} VIN${currentHistory.length === 1 ? "" : "s"} na lista`;
 
@@ -298,7 +311,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const settings = { ...VIN_DEFAULT_SETTINGS, ...(changes[VIN_SETTINGS_KEY].newValue || {}) };
     applySettings(settings);
     renderPurgeInfo();
-    render(currentHistory);
+    vinGetHistory().then(render);
   }
 
   if (changes[VIN_STORAGE_KEY]) {

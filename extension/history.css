@@ -547,3 +547,32 @@ h1 {
 .entry-btn-delete:hover {
   background: #fdeceb;
 }
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+
+.info-row .purge-info {
+  margin: 0;
+}
+
+.stats-btn {
+  padding: 7px 14px;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  background: #fff;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.stats-btn:hover {
+  background: #111111;
+  color: #fff;
+}

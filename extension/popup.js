@@ -11,6 +11,7 @@ const noMatchEl = document.getElementById("noMatch");
 let currentShifts = VIN_DEFAULT_SHIFTS;
 let currentHistory = [];
 let showDelete = true;
+let currentSettings = VIN_DEFAULT_SETTINGS;
 
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
@@ -43,8 +44,9 @@ function renderShiftCounts(history, shifts) {
 function render(history) {
   listEl.innerHTML = "";
 
-  history = history || [];
+  history = vinVisibleHistory(history || [], currentSettings);
   currentHistory = history;
+  updateCopyAllLabel();
 
   renderShiftCounts(history, currentShifts);
 
@@ -139,9 +141,19 @@ function openPage(file) {
 }
 
 document.getElementById("openListBtn").addEventListener("click", () => openPage("history.html"));
-document.getElementById("openStatsBtn").addEventListener("click", () => openPage("stats.html"));
-// Todos os VINs do dia de producao atual.
-document.getElementById("copyDayBtn").addEventListener("click", (event) => {
+const copyDayBtn = document.getElementById("copyDayBtn");
+
+function updateCopyAllLabel() {
+  copyDayBtn.textContent = currentSettings.shiftOnlyMode ? "Copiar todos os VINs do turno" : "Copiar todos os VINs do dia";
+}
+
+// Todos os VINs do dia de producao atual (ou do turno, no modo turno).
+copyDayBtn.addEventListener("click", (event) => {
+  if (currentSettings.shiftOnlyMode) {
+    const turno = vinCurrentShift(currentSettings);
+    vinCopyToClipboard(vinCopyTextList(currentHistory, `VINs do ${turno ? turno.label : "turno"}`), event.currentTarget);
+    return;
+  }
   const inicio = vinCycleStart(Date.now(), currentShifts);
   const doDia = currentHistory.filter((entry) => entry.timestamp >= inicio);
   vinCopyToClipboard(vinCopyTextList(doDia, "VINs do dia"), event.currentTarget);
@@ -152,6 +164,7 @@ document.getElementById("openSettingsBtn").addEventListener("click", () => openP
 async function load() {
   const settings = await vinGetSettings();
   currentShifts = settings.shifts;
+  currentSettings = settings;
   showDelete = settings.showDeleteButton !== false;
   // Limpa o que ja venceu antes de mostrar a lista.
   render(await vinPurgeExpired());
@@ -162,8 +175,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
     return;
   }
   if (changes[VIN_SETTINGS_KEY]) {
-    showDelete = (changes[VIN_SETTINGS_KEY].newValue || {}).showDeleteButton !== false;
-    render(currentHistory);
+    currentSettings = { ...VIN_DEFAULT_SETTINGS, ...(changes[VIN_SETTINGS_KEY].newValue || {}), shifts: currentShifts };
+    showDelete = currentSettings.showDeleteButton !== false;
+    vinGetHistory().then(render);
   }
   if (changes[VIN_STORAGE_KEY]) {
     render(changes[VIN_STORAGE_KEY].newValue || []);

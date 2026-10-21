@@ -47,6 +47,12 @@ purgeToggle.addEventListener("change", async () => {
   }
 });
 
+const shiftOnlyToggle = document.getElementById("shiftOnlyToggle");
+shiftOnlyToggle.addEventListener("change", async () => {
+  await vinSetSettings({ shiftOnlyMode: shiftOnlyToggle.checked });
+  renderDupes(await vinPurgeExpired());
+});
+
 showDeleteToggle.addEventListener("change", () => vinSetSettings({ showDeleteButton: showDeleteToggle.checked }));
 
 // Uma caixa por turno: apaga os VINs daquele turno quando ele termina.
@@ -301,6 +307,7 @@ async function iniciar() {
   dedupeToggle.checked = settings.dedupeEnabled;
   purgeToggle.checked = settings.autoPurgeEnabled;
   showDeleteToggle.checked = settings.showDeleteButton !== false;
+  shiftOnlyToggle.checked = settings.shiftOnlyMode === true;
   renderShiftPurge(settings);
   renderPrefixes(await vinGetPrefixes());
   frozen = settings.repairFrozen === true;

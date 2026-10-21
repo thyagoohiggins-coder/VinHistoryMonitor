@@ -54,6 +54,7 @@ async function saveVin(rawValue) {
   resetDetailTracking(details);
 
   if (currentEntryTimestamp !== null) {
+    announceRepeatedVin(vin, currentEntryTimestamp);
     vinStatsUpsert(currentEntryTimestamp, {
       vin,
       model: details.model,
@@ -62,6 +63,48 @@ async function saveVin(rawValue) {
       parts: details.parts,
     });
   }
+}
+
+// VIN ja lancado antes (na lista ou nos indicadores, que guardam os dias
+// anteriores): avisa ao lado do campo quantas vezes ele ja foi inserido.
+async function announceRepeatedVin(vin, timestamp) {
+  document.getElementById("vin-monitor-repeat-notice")?.remove();
+  const key = vinCompareKey(vin);
+  const [history, stats] = await Promise.all([vinGetHistory(), vinStatsGetAll()]);
+  const vezes = new Set();
+  for (const entry of history) {
+    if (vinCompareKey(entry.vin) === key) vezes.add(entry.timestamp);
+  }
+  for (const record of stats) {
+    if (vinCompareKey(record.vin) === key) vezes.add(record.ts);
+  }
+  vezes.add(timestamp);
+  if (vezes.size < 2) {
+    return;
+  }
+  const ordinal = VIN_ORDINALS_F[vezes.size - 1] || `${vezes.size}ª`;
+  showVinNotice(`Essa é a ${ordinal} vez que este VIN é inserido – veículo retornou ou o VIN foi repetido.`);
+}
+
+function showVinNotice(message) {
+  document.getElementById("vin-monitor-repeat-notice")?.remove();
+  const notice = document.createElement("div");
+  notice.id = "vin-monitor-repeat-notice";
+  notice.textContent = message;
+  notice.style.cssText =
+    "position:fixed;z-index:2147483647;box-sizing:border-box;max-width:440px;background:#fff7e0;color:#7a4b00;" +
+    "border:1px solid #f0b429;border-radius:8px;padding:8px 12px;font:600 13px/1.35 system-ui,sans-serif;" +
+    "box-shadow:0 4px 14px rgba(0,0,0,.15);";
+  const rect = currentVinInput?.isConnected ? currentVinInput.getBoundingClientRect() : null;
+  if (rect && rect.width > 0) {
+    notice.style.left = `${Math.max(rect.left, 8)}px`;
+    notice.style.top = `${rect.bottom + 6}px`;
+  } else {
+    notice.style.right = "12px";
+    notice.style.top = "12px";
+  }
+  document.documentElement.appendChild(notice);
+  setTimeout(() => notice.remove(), 7000);
 }
 
 // Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao

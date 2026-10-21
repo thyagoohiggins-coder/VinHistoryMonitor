@@ -60,6 +60,17 @@
       <p id="pinMessage" class="pin-message"></p>
 
       <div id="protectedActions" class="protected-actions" hidden>
+        <h3 class="sub-title">Modo turno</h3>
+        <label class="switch-row">
+          <span>Mostrar só o turno atual e apagar tudo no fim de cada turno</span>
+          <input type="checkbox" id="shiftOnlyToggle" />
+        </label>
+        <p class="hint">
+          Vale para todos os turnos: a lista (popup, lista de VINs, copiar) mostra so o turno atual e, quando ele termina,
+          os VINs sao apagados da extensao; o processo se repete a cada turno. Os indicadores continuam guardados.
+          Ligado, substitui as opcoes de apagar abaixo.
+        </p>
+
         <h3 class="sub-title">Apagar VINs automaticamente</h3>
         <label class="switch-row">
           <span>Apagar todos os VINs ao fim do 3º turno (virada do dia, 06:00)</span>

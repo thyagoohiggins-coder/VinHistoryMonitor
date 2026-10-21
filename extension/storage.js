@@ -37,6 +37,9 @@ const VIN_DEFAULT_SETTINGS = {
   showDeleteButton: true,
   // Turnos cujos VINs sao apagados automaticamente quando o turno termina.
   purgeShiftIds: [],
+  // Modo turno: a lista mostra so o turno atual e tudo e apagado no fim de
+  // cada turno (vale para todos os turnos).
+  shiftOnlyMode: false,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -142,9 +145,7 @@ async function vinAddEntry(vin, details) {
     const settings = await vinGetSettings();
 
     // Garante que um dia de producao ja encerrado nao fique misturado com o novo.
-    const current = settings.autoPurgeEnabled
-      ? vinDropExpired(history, settings.shifts)
-      : history;
+    const current = vinApplyPurge(history, settings);
 
     const base = settings.dedupeEnabled
       ? current.filter((entry) => vinCompareKey(entry.vin) !== key)
@@ -221,7 +222,7 @@ function vinNextShiftEnd(agora, shift) {
 
 // Historico sem os VINs dos turnos marcados para apagar que ja terminaram.
 function vinDropShiftExpired(history, settings, agora = Date.now()) {
-  const ids = settings.purgeShiftIds || [];
+  const ids = settings.shiftOnlyMode ? settings.shifts.map((shift) => shift.id) : settings.purgeShiftIds || [];
   if (ids.length === 0) {
     return history;
   }
@@ -233,7 +234,8 @@ function vinDropShiftExpired(history, settings, agora = Date.now()) {
 
 // Proxima limpeza automatica (fim do dia ou fim de um turno marcado), ou null.
 function vinNextPurgeTime(agora, settings) {
-  const tempos = (settings.purgeShiftIds || [])
+  const ids = settings.shiftOnlyMode ? settings.shifts.map((shift) => shift.id) : settings.purgeShiftIds || [];
+  const tempos = ids
     .map((id) => settings.shifts.find((shift) => shift.id === id))
     .filter(Boolean)
     .map((shift) => vinNextShiftEnd(agora, shift));
@@ -246,6 +248,17 @@ function vinNextPurgeTime(agora, settings) {
 function vinApplyPurge(history, settings, agora = Date.now()) {
   const kept = settings.autoPurgeEnabled ? vinDropExpired(history, settings.shifts, agora) : history;
   return vinDropShiftExpired(kept, settings, agora);
+}
+
+// O que a lista deve mostrar agora: no modo turno, so o turno atual (mesmo
+// que a limpeza do storage ainda nao tenha rodado).
+function vinVisibleHistory(history, settings, agora = Date.now()) {
+  return settings.shiftOnlyMode ? vinApplyPurge(history, settings, agora) : history;
+}
+
+// Turno atual (ou null).
+function vinCurrentShift(settings, agora = Date.now()) {
+  return vinShiftForTimestamp(agora, settings.shifts);
 }
 
 // Apaga do storage os VINs vencidos (dia encerrado e turnos marcados).
@@ -528,6 +541,10 @@ function vinBuildRepairRow(entry) {
 // lateral ligando os lancamentos do mesmo VIN.
 // ---------------------------------------------------------------------------
 
+const VIN_ORDINALS_F = [
+  "primeira", "segunda", "terceira", "quarta", "quinta",
+  "sexta", "sétima", "oitava", "nona", "décima",
+];
 const VIN_ORDINALS = [
   "Primeiro", "Segundo", "Terceiro", "Quarto", "Quinto",
   "Sexto", "Sétimo", "Oitavo", "Nono", "Décimo",
