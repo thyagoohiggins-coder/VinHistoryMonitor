@@ -122,7 +122,7 @@ function showRepeatBadge(input, vezes) {
   repeatBadge.textContent = `${vezes}º lançamento – veículo retornou ou o VIN foi repetido`;
   repeatBadge.style.cssText =
     "position:fixed;z-index:2147483647;pointer-events:none;box-sizing:border-box;" +
-    "padding:2px 8px;border-radius:10px;background:#f59e0b;color:#fff;" +
+    "padding:2px 8px;border-radius:10px;background:#7c3aed;color:#fff;" +
     "font:700 11px/16px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2);";
   document.documentElement.appendChild(repeatBadge);
   // Campo estreito: a etiqueta nao passa da borda esquerda dele.
