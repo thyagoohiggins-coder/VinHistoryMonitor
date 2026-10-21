@@ -7,14 +7,23 @@ let prefixItems = [];
 let prefixActive = -1;
 let prefixBox = null;
 let prefixInput = null;
+let prefixEnabled = true;
 
 vinGetPrefixes().then((list) => {
   prefixList = list;
 });
+vinGetSettings().then((settings) => {
+  prefixEnabled = settings.prefixSuggestEnabled !== false;
+});
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[VIN_PREFIX_KEY]) {
+  if (area !== "local") return;
+  if (changes[VIN_PREFIX_KEY]) {
     prefixList = changes[VIN_PREFIX_KEY].newValue || [];
+  }
+  if (changes[VIN_SETTINGS_KEY]) {
+    prefixEnabled = (changes[VIN_SETTINGS_KEY].newValue || {}).prefixSuggestEnabled !== false;
+    if (!prefixEnabled) hidePrefixBox();
   }
 });
 
@@ -128,7 +137,7 @@ function pickPrefix(index) {
 }
 
 function updatePrefixSuggestions() {
-  if (!prefixInput || !prefixInput.isConnected || document.activeElement !== prefixInput) {
+  if (!prefixEnabled || !prefixInput || !prefixInput.isConnected || document.activeElement !== prefixInput) {
     hidePrefixBox();
     return;
   }
