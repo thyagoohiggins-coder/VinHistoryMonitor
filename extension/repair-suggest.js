@@ -169,15 +169,27 @@ function pickRepair(index) {
   }
   const text = getFieldValue(repairInput);
   const { current } = splitRepairText(text);
-  // As ultimas palavras digitadas que a sugestao completa (ex.: "mola" ->
+  // As ultimas palavras digitadas que buscaram a sugestao (ex.: "mola" ->
   // "Mola RR LH FP.") sao trocadas; o resto fica e a sugestao entra no fim.
   const typed = current.trim();
   const head = text.slice(0, text.length - current.length) + current.slice(0, current.length - current.trimStart().length);
   const words = typed.split(/(\s+)/);
   let value = null;
+  const itemTokens = repairTokens(item.text);
+  // O trecho final e a busca que gerou a sugestao quando cada palavra dele e
+  // o comeco de alguma palavra da sugestao (ex.: "mar" -> "com marca de
+  // ferramenta"): esse trecho e trocado, nao repetido.
+  const isSearchFor = (tail) => {
+    const tokens = repairTokens(tail);
+    return (
+      tokens.length > 0 &&
+      (repairNormalize(item.text).startsWith(repairNormalize(tail)) ||
+        tokens.every((token) => itemTokens.some((cand) => cand.startsWith(token))))
+    );
+  };
   for (let i = 0; i < words.length && value === null; i += 2) {
     const tail = words.slice(i).join("");
-    if (tail && repairNormalize(item.text).startsWith(repairNormalize(tail))) {
+    if (isSearchFor(tail)) {
       value = head + words.slice(0, i).join("") + item.text;
     }
   }
