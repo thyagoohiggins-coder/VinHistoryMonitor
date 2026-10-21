@@ -54,7 +54,6 @@ async function saveVin(rawValue) {
   resetDetailTracking(details);
 
   if (currentEntryTimestamp !== null) {
-    announceRepeatedVin(vin, currentEntryTimestamp);
     vinStatsUpsert(currentEntryTimestamp, {
       vin,
       model: details.model,
@@ -66,80 +65,94 @@ async function saveVin(rawValue) {
 }
 
 // VIN ja lancado antes (na lista ou nos indicadores, que guardam os dias
-// anteriores): avisa ao lado do campo quantas vezes ele ja foi inserido.
-async function announceRepeatedVin(vin, timestamp) {
-  document.getElementById("vin-monitor-repeat-notice")?.remove();
-  if ((await vinGetSettings()).repeatNoticeEnabled === false) {
-    return;
-  }
-  const key = vinCompareKey(vin);
-  const [history, stats] = await Promise.all([vinGetHistory(), vinStatsGetAll()]);
-  const vezes = new Set();
-  for (const entry of history) {
-    if (vinCompareKey(entry.vin) === key) vezes.add(entry.timestamp);
-  }
-  for (const record of stats) {
-    if (vinCompareKey(record.vin) === key) vezes.add(record.ts);
-  }
-  vezes.add(timestamp);
-  if (vezes.size < 2) {
-    return;
-  }
-  showVinNotice(vezes.size);
-}
+// anteriores): uma etiqueta pequena aparece na hora, dentro do campo VIN,
+// enquanto se digita. Os lancamentos ficam em memoria para nao esperar o storage.
+const knownVinLaunches = new Map();
+let repeatNoticeEnabled = true;
 
-// Aviso compacto abaixo do campo VIN; some sozinho em 3,5s ou ao clicar.
-function showVinNotice(vezes) {
-  document.getElementById("vin-monitor-repeat-notice")?.remove();
-  const ordinal = VIN_ORDINALS_F[vezes - 1] || `${vezes}ª`;
-
-  const notice = document.createElement("div");
-  notice.id = "vin-monitor-repeat-notice";
-  notice.title = "Clique para fechar";
-  notice.style.cssText =
-    "position:fixed;z-index:2147483647;display:flex;align-items:center;gap:8px;box-sizing:border-box;" +
-    "max-width:360px;padding:6px 10px 6px 8px;background:#fffbeb;color:#78350f;border:1px solid #fcd34d;" +
-    "border-left:4px solid #f59e0b;border-radius:6px;font:12px/1.3 system-ui,sans-serif;" +
-    "box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;opacity:0;transform:translateY(-4px);" +
-    "transition:opacity .15s ease,transform .15s ease;";
-
-  const icon = document.createElement("span");
-  icon.textContent = "!";
-  icon.style.cssText =
-    "flex:none;width:18px;height:18px;border-radius:50%;background:#f59e0b;color:#fff;" +
-    "font:700 12px/18px system-ui,sans-serif;text-align:center;";
-
-  const text = document.createElement("span");
-  const title = document.createElement("strong");
-  title.textContent = `VIN repetido – ${ordinal} vez`;
-  title.style.cssText = "display:block;font-size:12.5px;";
-  const detail = document.createElement("span");
-  detail.textContent = "Veículo retornou ou o VIN foi repetido.";
-  detail.style.cssText = "display:block;color:#92400e;opacity:.85;";
-  text.append(title, detail);
-  notice.append(icon, text);
-
-  const rect = currentVinInput?.isConnected ? currentVinInput.getBoundingClientRect() : null;
-  if (rect && rect.width > 0) {
-    notice.style.left = `${Math.max(rect.left, 8)}px`;
-    notice.style.top = `${rect.bottom + 6}px`;
-  } else {
-    notice.style.right = "12px";
-    notice.style.top = "12px";
-  }
-
-  const close = () => {
-    notice.style.opacity = "0";
-    setTimeout(() => notice.remove(), 160);
+function rebuildKnownVins(history, stats) {
+  knownVinLaunches.clear();
+  const add = (vin, ts) => {
+    const key = vinCompareKey(vin);
+    if (!key) return;
+    if (!knownVinLaunches.has(key)) knownVinLaunches.set(key, new Set());
+    knownVinLaunches.get(key).add(ts);
   };
-  notice.addEventListener("click", close);
-  document.documentElement.appendChild(notice);
-  requestAnimationFrame(() => {
-    notice.style.opacity = "1";
-    notice.style.transform = "none";
-  });
-  setTimeout(close, 3500);
+  for (const entry of history) add(entry.vin, entry.timestamp);
+  for (const record of stats) add(record.vin, record.ts);
 }
+
+let knownHistory = [];
+let knownStats = [];
+Promise.all([vinGetHistory(), vinStatsGetAll(), vinGetSettings()]).then(([history, stats, settings]) => {
+  knownHistory = history;
+  knownStats = stats;
+  repeatNoticeEnabled = settings.repeatNoticeEnabled !== false;
+  rebuildKnownVins(knownHistory, knownStats);
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (changes[VIN_STORAGE_KEY]) knownHistory = changes[VIN_STORAGE_KEY].newValue || [];
+  if (changes[VIN_STATS_KEY]) knownStats = changes[VIN_STATS_KEY].newValue || [];
+  if (changes[VIN_STORAGE_KEY] || changes[VIN_STATS_KEY]) rebuildKnownVins(knownHistory, knownStats);
+  if (changes[VIN_SETTINGS_KEY]) {
+    repeatNoticeEnabled = (changes[VIN_SETTINGS_KEY].newValue || {}).repeatNoticeEnabled !== false;
+    if (!repeatNoticeEnabled) hideRepeatBadge();
+  }
+});
+
+let repeatBadge = null;
+let repeatBadgeTimer = null;
+
+function hideRepeatBadge() {
+  clearTimeout(repeatBadgeTimer);
+  repeatBadge?.remove();
+  repeatBadge = null;
+}
+
+// Etiqueta dentro do campo, no canto direito: "2º lançamento".
+function showRepeatBadge(input, vezes) {
+  hideRepeatBadge();
+  const rect = input.getBoundingClientRect();
+  if (rect.width === 0) return;
+
+  repeatBadge = document.createElement("div");
+  repeatBadge.id = "vin-monitor-repeat-notice";
+  repeatBadge.textContent = `${vezes}º lançamento`;
+  repeatBadge.title = "VIN repetido: veículo retornou ou o VIN foi digitado de novo";
+  repeatBadge.style.cssText =
+    "position:fixed;z-index:2147483647;pointer-events:none;box-sizing:border-box;" +
+    "padding:2px 8px;border-radius:10px;background:#f59e0b;color:#fff;" +
+    "font:700 11px/16px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2);";
+  document.documentElement.appendChild(repeatBadge);
+  const largura = repeatBadge.offsetWidth;
+  repeatBadge.style.left = `${rect.right - largura - 8}px`;
+  repeatBadge.style.top = `${rect.top + (rect.height - 20) / 2}px`;
+  repeatBadgeTimer = setTimeout(hideRepeatBadge, 2500);
+}
+
+function checkRepeatedVin(input) {
+  if (!repeatNoticeEnabled) return;
+  const key = vinCompareKey(getFieldValue(input));
+  const launches = knownVinLaunches.get(key);
+  // O registro deste proprio preenchimento (se ja gravado) nao conta duas vezes.
+  const anteriores = launches ? [...launches].filter((ts) => ts !== currentEntryTimestamp).length : 0;
+  if (anteriores === 0) {
+    hideRepeatBadge();
+    return;
+  }
+  showRepeatBadge(input, anteriores + 1);
+}
+
+document.addEventListener(
+  "input",
+  (event) => {
+    if (currentVinInput && event.target === currentVinInput) checkRepeatedVin(currentVinInput);
+  },
+  true
+);
+window.addEventListener("scroll", hideRepeatBadge, true);
 
 // Modelo, cor e as opcoes de "PEÇAS FALTANTES" costumam ser marcadas depois do VIN: ao
 // clicar numa caixa, atualiza o registro do VIN atual.
