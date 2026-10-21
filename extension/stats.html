@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>Indicadores de reparos</title>
+    <title>Indicadores de reparos críticos</title>
     <link rel="stylesheet" href="history.css" />
     <link rel="stylesheet" href="stats.css" />
   </head>
@@ -12,7 +12,7 @@
         <span class="brand-title">Reparo FA</span>
         <span class="brand-sub">Controle de VINs</span>
       </div>
-      <h1>Indicadores de reparos</h1>
+      <h1>Indicadores de reparos críticos</h1>
       <nav class="page-nav">
         <a href="history.html">Lista de VINs</a>
         <a href="stats.html" class="current">Indicadores</a>
@@ -22,30 +22,24 @@
 
     <div class="toolbar">
       <label for="periodSelect">Periodo:</label>
-      <select id="periodSelect">
-        <option value="today">Dia de producao atual</option>
-        <option value="7">Ultimos 7 dias</option>
-        <option value="30">Ultimos 30 dias</option>
-        <option value="all" selected>Tudo</option>
-      </select>
+      <select id="periodSelect"></select>
     </div>
 
     <section id="kpis" class="kpis"></section>
 
     <section class="card">
-      <h2 class="section-title">Modelos com mais reparos</h2>
+      <h2 class="section-title">Cripples por modelo</h2>
       <div id="modelBars"></div>
-      <div id="colorLegend" class="color-legend"></div>
     </section>
 
     <section class="card">
-      <h2 class="section-title">Reparos mais frequentes</h2>
+      <h2 class="section-title">Reparos críticos mais frequentes</h2>
       <div id="repairBars"></div>
     </section>
 
     <p class="shift-hint">
-      Cada VIN conta uma vez (o registro mais recente). Os indicadores nao sao apagados na virada do dia;
-      so pelo PIN nas configuracoes.
+      Cada VIN conta uma vez (o registro mais recente). Os indicadores nao sao apagados na virada do dia
+      (so pelo PIN nas configuracoes ou no fim de cada turno, com o modo turno ligado).
     </p>
 
     <div class="signature">Hikins</div>

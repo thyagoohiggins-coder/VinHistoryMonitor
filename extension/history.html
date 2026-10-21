@@ -23,15 +23,34 @@
       </div>
     </header>
 
-    <p id="purgeInfo" class="purge-info"></p>
+    <div class="info-row">
+      <p id="purgeInfo" class="purge-info"></p>
+      <a href="stats.html" class="stats-btn">Indicadores de reparos críticos</a>
+    </div>
 
     <section class="shift-summary">
       <h2 class="section-title">VINs por turno</h2>
       <ul id="shiftCounts" class="shift-counts"></ul>
     </section>
 
-    <div class="toolbar">
+    <div class="toolbar filters">
       <input id="searchInput" type="search" placeholder="Buscar VIN..." autocomplete="off" />
+      <select id="modelFilter" title="Modelo">
+        <option value="">Todos os modelos</option>
+      </select>
+      <select id="colorFilter" title="Cor">
+        <option value="">Todas as cores</option>
+      </select>
+      <label class="time-filter">
+        De <input id="timeFrom" type="time" />
+      </label>
+      <label class="time-filter">
+        ate <input id="timeTo" type="time" />
+      </label>
+      <input id="repairFilter" type="search" placeholder="Reparo..." autocomplete="off" />
+      <button id="clearFilters" type="button" class="clear-filters">Limpar filtros</button>
+      <button id="copyFilteredBtn" type="button" class="entry-btn entry-btn-copy copy-filtered">Copiar VINs filtrados</button>
+      <span id="filterCount" class="filter-count"></span>
     </div>
 
     <div id="listContainer"></div>

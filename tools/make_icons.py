@@ -12,7 +12,7 @@ import os
 import struct
 import zlib
 
-VERDE = (11, 128, 67)      # #0b8043, o mesmo verde usado na interface
+FUNDO = (0, 0, 0)          # fundo preto do icone
 BRANCO = (255, 255, 255)
 
 RAIO = 0.22                # canto arredondado, fracao do lado
@@ -86,7 +86,7 @@ def cor_do_ponto(x, y):
     if na_letra(x, y):
         return BRANCO + (255,)
 
-    return VERDE + (255,)
+    return FUNDO + (255,)
 
 
 def renderiza(tamanho):

@@ -17,8 +17,10 @@
 
       <section class="actions">
         <button id="openListBtn" type="button">Ver lista de VINs</button>
-        <button id="openStatsBtn" class="secondary-btn" type="button">Indicadores de reparos</button>
+        <button id="copyDayBtn" class="copy-all-btn" type="button">Copiar todos os VINs do dia</button>
       </section>
+
+      <input id="vinSearch" class="vin-search" type="search" placeholder="Buscar VIN..." autocomplete="off" />
 
       <button id="toggleSummaryBtn" class="link-toggle" type="button">Mostrar resumo</button>
       <div id="summary" class="summary hidden">
@@ -31,6 +33,7 @@
       </div>
 
       <ul id="historyList" class="history-list"></ul>
+      <p id="noMatch" class="empty-state" style="display: none">Nenhum VIN encontrado.</p>
 
       <p id="emptyState" class="empty-state">
         Nenhum VIN registrado ainda. Preencha o campo VIN no formulario para comecar.

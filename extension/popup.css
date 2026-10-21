@@ -30,7 +30,7 @@ h1 {
   margin-bottom: 10px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0b8043, #0a6b39);
+  background: linear-gradient(135deg, #2a2a2a, #000000);
   color: #fff;
 }
 
@@ -92,7 +92,7 @@ h1 {
 .shift-count-value {
   font-size: 15px;
   font-weight: 700;
-  color: #0b8043;
+  color: #111111;
 }
 
 .link-toggle {
@@ -115,15 +115,15 @@ h1 {
   gap: 6px;
   margin: 0 0 10px;
   padding: 8px 10px;
-  background: #f0f7f2;
-  border: 1px solid #d7ead9;
+  background: #f4f4f4;
+  border: 1px solid #e2e2e2;
   border-radius: 8px;
 }
 
 .count-number {
   font-size: 20px;
   font-weight: 700;
-  color: #0b8043;
+  color: #111111;
 }
 
 .count-label {
@@ -146,8 +146,8 @@ h1 {
 .actions button {
   width: 100%;
   padding: 8px;
-  border: 1px solid #0b8043;
-  background: #0b8043;
+  border: 1px solid #111111;
+  background: #111111;
   color: #fff;
   border-radius: 6px;
   font-size: 12px;
@@ -155,7 +155,17 @@ h1 {
 }
 
 .actions button:hover {
-  background: #096c37;
+  background: #333333;
+}
+
+.vin-search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 7px 10px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  font-size: 13px;
 }
 
 .history-list {
@@ -168,9 +178,9 @@ h1 {
   display: flex;
   flex-direction: column;
   padding: 8px 10px;
-  border: 1px solid #ececec;
-  border-radius: 8px;
-  margin-bottom: 6px;
+  border: 1px solid #6b7280;
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
 
 .history-item.duplicate-entry {
@@ -180,8 +190,9 @@ h1 {
 
 .history-item .vin-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
 }
 
 .delete-entry-btn {
@@ -196,6 +207,27 @@ h1 {
   opacity: 0.7;
 }
 
+.copy-entry-btn {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.copy-entry-btn:hover {
+  opacity: 1;
+  background: #f2f2f2;
+}
+
+.copy-entry-btn + .delete-entry-btn {
+  margin-left: 0;
+}
+
 .delete-entry-btn:hover {
   opacity: 1;
   background: #fdeceb;
@@ -205,7 +237,7 @@ h1 {
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0.5px;
-  word-break: break-all;
+  white-space: nowrap;
 }
 
 .duplicate-tag {
@@ -219,10 +251,80 @@ h1 {
 }
 
 .history-item .time {
+  margin: 4px 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
   font-size: 11px;
-  color: #666;
-  margin-top: 2px;
+  font-weight: 400;
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
 }
+
+.time-date {
+  opacity: 0.8;
+}
+
+.time-hour {
+  font-weight: 700;
+}
+
+.history-item .entry-actions {
+  margin-top: 6px;
+}
+
+.actions button.copy-all-btn {
+  margin-top: 6px;
+  color: #b7791f;
+  background: #fffbea;
+  border: 1px solid #ecc94b;
+  font-weight: 700;
+}
+
+.actions button.copy-all-btn:hover {
+  background: #fef3c7;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.entry-btn {
+  padding: 3px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  line-height: 1.4;
+}
+
+.entry-btn-copy {
+  color: #b7791f;
+  border: 1px solid #ecc94b;
+  background: #fffbea;
+}
+
+.entry-btn-copy:hover {
+  background: #fef3c7;
+}
+
+.entry-btn-delete {
+  color: #d0392f;
+  border: 1px solid #f1a9a2;
+  background: #fff5f4;
+}
+
+.entry-btn-delete:hover {
+  background: #fdeceb;
+}
+
 
 .empty-state {
   display: none;
@@ -340,14 +442,14 @@ h1 {
 }
 
 .icon-btn:hover {
-  background: #f1f5f2;
+  background: #f2f2f2;
 }
 
 .actions button.secondary-btn {
   margin-top: 6px;
   background: #fff;
-  color: #0b8043;
-  border: 1px solid #0b8043;
+  color: #111111;
+  border: 1px solid #111111;
 }
 
 .summary {
@@ -356,4 +458,41 @@ h1 {
 
 .summary.hidden {
   display: none;
+}
+
+.repair-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-basis: 100%;
+  font-size: 12px;
+  color: #333;
+}
+
+.repair-label {
+  font-weight: 700;
+  color: #111111;
+}
+
+.repair-value {
+  word-break: break-word;
+}
+
+.launch-tag {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.launch-1 { background: #000; }
+.launch-2 { background: #7c3aed; }
+
+.repair-value {
+  font-weight: 700;
+  font-style: italic;
 }

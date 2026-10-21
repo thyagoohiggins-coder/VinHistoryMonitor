@@ -1,36 +1,24 @@
-// Mantem o badge do icone da extensao com a contagem de VINs no historico.
+// Limpeza automatica dos VINs ao fim do dia e dos turnos marcados.
 
 importScripts("storage.js");
 
-const STORAGE_KEY = "vinHistory";
 const PURGE_ALARM = "vinPurge";
 
-async function updateBadge() {
-  const { [STORAGE_KEY]: history = [] } = await chrome.storage.local.get(STORAGE_KEY);
-  const count = history.length;
-
-  await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
-
-  // Escuro, e nao verde: o icone ja e verde, entao um badge da mesma cor
-  // se dissolveria nele.
-  await chrome.action.setBadgeBackgroundColor({ color: "#1f2937" });
-
-  // setBadgeTextColor so existe em navegadores mais novos.
-  if (chrome.action.setBadgeTextColor) {
-    await chrome.action.setBadgeTextColor({ color: "#ffffff" });
-  }
+// O icone nao mostra mais a contagem de VINs: apaga qualquer numero que uma
+// versao anterior tenha deixado no icone.
+function clearBadge() {
+  chrome.action.setBadgeText({ text: "" });
 }
 
-// Agenda o alarme para a proxima virada do dia de producao (fim do 3º turno).
+// Agenda o alarme para a proxima limpeza (virada do dia ou fim de turno marcado).
 async function schedulePurge() {
   const settings = await vinGetSettings();
-  if (!settings.autoPurgeEnabled) {
+  const when = vinNextPurgeTime(Date.now(), settings);
+  if (when === null) {
     await chrome.alarms.clear(PURGE_ALARM);
     return;
   }
-  await chrome.alarms.create(PURGE_ALARM, {
-    when: vinNextCycleStart(Date.now(), settings.shifts),
-  });
+  await chrome.alarms.create(PURGE_ALARM, { when });
 }
 
 // Limpa o que ja venceu (cobre o navegador fechado na virada) e reagenda.
@@ -39,16 +27,13 @@ async function purgeAndSchedule() {
   await schedulePurge();
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  updateBadge();
-purgeAndSchedule();
+function start() {
+  clearBadge();
   purgeAndSchedule();
-});
-chrome.runtime.onStartup.addListener(() => {
-  updateBadge();
-purgeAndSchedule();
-  purgeAndSchedule();
-});
+}
+
+chrome.runtime.onInstalled.addListener(start);
+chrome.runtime.onStartup.addListener(start);
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === PURGE_ALARM) {
@@ -56,19 +41,11 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// Horarios dos turnos ou a opcao de apagar mudaram: reagenda.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== "local") {
-    return;
-  }
-  if (changes[STORAGE_KEY]) {
-    updateBadge();
-purgeAndSchedule();
-  }
-  // Horarios dos turnos ou a opcao de apagar mudaram: reagenda.
-  if (changes[VIN_SETTINGS_KEY]) {
+  if (area === "local" && changes[VIN_SETTINGS_KEY]) {
     purgeAndSchedule();
   }
 });
 
-updateBadge();
-purgeAndSchedule();
+start();

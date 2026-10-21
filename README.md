@@ -30,9 +30,10 @@ registro.
 - **Separacao e contagem por turno:** os VINs sao classificados pelo horario
   em que foram registrados. O popup e a lista mostram o total de VINs de
   cada turno, e a lista agrupa os VINs por turno, com a quantidade de cada um. 
-- **Destaque de "Já lançado":** VINs que aparecem mais de uma vez no historico
-  sao destacados (borda/fundo amarelo e etiqueta "Já lançado") tanto na lista
-  do popup quanto na pagina da lista.
+- **VINs repetidos:** quando o mesmo VIN aparece mais de uma vez, o mais antigo
+  ganha a etiqueta preta "Primeiro lançamento", o seguinte a roxa "Segundo
+  lançamento" (os seguintes, "Terceiro", "Quarto"..., seguem o mesmo padrao roxo). Os lancamentos do mesmo VIN
+  sao ligados por uma linha lateral finissima (cada VIN repetido usa uma cor). Cada registro de VIN fica dentro de um quadrado com borda escura.
 - **Lista de VINs:** pagina dedicada (aberta pelo botao "Ver lista de VINs"
   no popup) com os VINs do dia separados por turno, quantidade de cada turno,
   busca por VIN, destaque de duplicados e botao para apagar cada VIN.
@@ -46,6 +47,12 @@ registro.
 - **Modelo e cor:** ao lado de cada VIN (lista e popup) aparecem etiquetas com
   a opcao marcada nas perguntas "MODELO" e "COR" do formulario, atualizadas
   se voce trocar a resposta depois de o VIN ja ter sido registrado.
+- **Principal reparo junto do VIN:** o texto do campo "PRINCIPAL REPARO" fica
+  gravado no registro do VIN (aparece como "Reparo: ..." na lista e no popup),
+  e e apagado junto com ele na limpeza ao fim do 3º turno. Tambem entra nos
+  indicadores, que sao permanentes.
+- **Perguntas escondidas:** se uma resposta do formulario esconde (ou remove) a pergunta
+  PEÇAS FALTANTES, MODELO, COR ou PRINCIPAL REPARO, o que foi preenchido nela antes e limpo do VIN (e dos indicadores).
 - **Cripple (PEÇAS FALTANTES):** a lista (e o popup) mostram, na frente de cada
   VIN, as opcoes marcadas na pergunta "PEÇAS FALTANTES" do formulario (varias
   ou todas podem estar marcadas; "Outra" mostra o texto digitado). As opcoes
@@ -63,7 +70,7 @@ registro.
   lista (um por linha) e exportar o banco em `.txt`. O banco pode ser
   **congelado** (interruptor): congelado, nao aprende nem aceita reparos novos.
 - **Popup enxuto:** icone "FA", botao de configuracoes (engrenagem), "Ver lista
-  de VINs", "Indicadores de reparos" e os VINs recentes. O total e os VINs por
+  de VINs", "Indicadores de reparos críticos" e os VINs recentes. O total e os VINs por
   turno ficam escondidos atras de "Mostrar resumo".
 - **Configuracoes** (`settings.html`): remover repetidos, limpeza ao fim do 3º
   turno, banco de reparos (congelar, adicionar, importar/exportar) e a **area
@@ -71,12 +78,12 @@ registro.
   geral", "Apagar indicadores" e troca de PIN. O PIN e uma trava de interface
   (guardado como hash local), nao uma protecao contra quem tem acesso ao
   navegador.
-- **Indicadores** (`stats.html`): modelos com mais reparos (barras divididas
-  pelas cores dos veiculos), reparos mais frequentes (com o modelo onde mais
+- **Indicadores de reparos críticos** (`stats.html`): modelos com mais reparos (barras divididas
+  pelas cores dos veiculos), reparos críticos mais frequentes (com o modelo onde mais
   ocorrem) e filtro por periodo (dia de producao, 7 dias, 30 dias, tudo). Os
   dados ficam num registro proprio que **nao e apagado na virada do dia**; cada
   VIN conta uma vez (o registro mais recente).
-- Contagem de VINs no historico exibida como badge no icone da extensao.
+- O icone da extensao e "FA" em fundo preto, sem numero de contagem.
 
 ## Instalacao (modo desenvolvedor)
 
@@ -101,7 +108,7 @@ extension/
   content.js      # Detecta o campo VIN e grava o historico
   repairs.js      # Banco de reparos: aprendizado e busca por similaridade
   repair-suggest.js # Balao de sugestoes no campo PRINCIPAL REPARO
-  background.js   # Mantem o badge do icone com a contagem de VINs
+  background.js   # Alarme da limpeza diaria dos VINs (fim do 3º turno)
   popup.html/js/css   # Popup enxuto: atalhos e VINs recentes
   settings.html/js/css # Configuracoes, banco de reparos e area com PIN
   stats.html/js/css   # Indicadores de reparos por modelo/cor
@@ -110,7 +117,7 @@ extension/
 
 O historico e armazenado localmente via `chrome.storage.local`:
 
-- `vinHistory`: lista de objetos `{ vin, timestamp, model?, color?, parts? }`.
+- `vinHistory`: lista de objetos `{ vin, timestamp, model?, color?, repair?, parts? }`.
 - `vinStats`: `{ ts, vin, model, color, repair }` por VIN (indicadores, permanente).
 - `vinPinHash`: hash do PIN (padrao 0000 quando ausente).
 - `vinSettings`: `{ dedupeEnabled: boolean, autoPurgeEnabled: boolean, repairFrozen: boolean, shifts: [{ id, label, start, end }] }`

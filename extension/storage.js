@@ -4,10 +4,18 @@
 const VIN_STORAGE_KEY = "vinHistory";
 const VIN_SETTINGS_KEY = "vinSettings";
 // Registro permanente (nao e apagado na virada do dia) usado nos indicadores:
-// { ts, vin, model, color, repair } por VIN lancado.
+// { ts, vin, model, color, parts, repair } por VIN lancado.
 const VIN_STATS_KEY = "vinStats";
 const VIN_STATS_MAX = 20000;
 const VIN_PIN_KEY = "vinPinHash";
+// Modelos e prefixos de VIN sugeridos ao clicar no campo VIN do formulario.
+const VIN_PREFIX_KEY = "vinPrefixes";
+const VIN_DEFAULT_PREFIXES = [
+  { model: "S202 (Uni-T)", prefix: "95PLDL61DVB" },
+  { model: "C655 (CS55)", prefix: "95PJCL61DVB" },
+  { model: "C928 (CS75)", prefix: "95PKDM81DVB" },
+  { model: "T1E ADAS (Tiggo 7)", prefix: "95PEEL61DVB" },
+];
 const VIN_DEFAULT_PIN = "0000";
 // Horarios FIXOS dos turnos (nao sao configuraveis).
 const VIN_DEFAULT_SHIFTS = [
@@ -25,6 +33,13 @@ const VIN_DEFAULT_SETTINGS = {
   autoPurgeEnabled: true,
   // Banco de reparos congelado: nao aprende nem aceita reparos novos.
   repairFrozen: false,
+  // Mostra o botao "Apagar" em cada VIN (popup e lista).
+  showDeleteButton: true,
+  // Turnos cujos VINs sao apagados automaticamente quando o turno termina.
+  purgeShiftIds: [],
+  // Modo turno: a lista mostra so o turno atual e tudo e apagado no fim de
+  // cada turno (vale para todos os turnos).
+  shiftOnlyMode: false,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -130,9 +145,7 @@ async function vinAddEntry(vin, details) {
     const settings = await vinGetSettings();
 
     // Garante que um dia de producao ja encerrado nao fique misturado com o novo.
-    const current = settings.autoPurgeEnabled
-      ? vinDropExpired(history, settings.shifts)
-      : history;
+    const current = vinApplyPurge(history, settings);
 
     const base = settings.dedupeEnabled
       ? current.filter((entry) => vinCompareKey(entry.vin) !== key)
@@ -182,13 +195,112 @@ function vinDropExpired(history, shifts, agora = Date.now()) {
   return history.filter((entry) => entry.timestamp >= limite);
 }
 
-// Apaga do storage os VINs de dias encerrados. Retorna o historico atual.
+// Fim (ms) da ocorrencia do turno que contem `timestamp`. Turnos que
+// atravessam a meia-noite terminam no dia seguinte.
+function vinShiftOccurrenceEnd(timestamp, shift) {
+  const inicio = vinParseTime(shift.start);
+  const fim = vinParseTime(shift.end);
+  const data = new Date(timestamp);
+  const minutos = vinMinutesOfDay(timestamp);
+  data.setHours(Math.floor(fim / 60), fim % 60, 0, 0);
+  if (fim <= inicio && minutos >= inicio) {
+    data.setDate(data.getDate() + 1);
+  }
+  return data.getTime();
+}
+
+// Proximo fim (ms) de um turno depois de `agora`.
+function vinNextShiftEnd(agora, shift) {
+  const fim = vinParseTime(shift.end);
+  const data = new Date(agora);
+  data.setHours(Math.floor(fim / 60), fim % 60, 0, 0);
+  if (data.getTime() <= agora) {
+    data.setDate(data.getDate() + 1);
+  }
+  return data.getTime();
+}
+
+// Historico sem os VINs dos turnos marcados para apagar que ja terminaram.
+function vinDropShiftExpired(history, settings, agora = Date.now()) {
+  const ids = settings.shiftOnlyMode ? settings.shifts.map((shift) => shift.id) : settings.purgeShiftIds || [];
+  if (ids.length === 0) {
+    return history;
+  }
+  return history.filter((entry) => {
+    const shift = vinShiftForTimestamp(entry.timestamp, settings.shifts);
+    return !shift || !ids.includes(shift.id) || vinShiftOccurrenceEnd(entry.timestamp, shift) > agora;
+  });
+}
+
+// Proxima limpeza automatica (fim do dia ou fim de um turno marcado), ou null.
+function vinNextPurgeTime(agora, settings) {
+  const ids = settings.shiftOnlyMode ? settings.shifts.map((shift) => shift.id) : settings.purgeShiftIds || [];
+  const tempos = ids
+    .map((id) => settings.shifts.find((shift) => shift.id === id))
+    .filter(Boolean)
+    .map((shift) => vinNextShiftEnd(agora, shift));
+  if (settings.autoPurgeEnabled) {
+    tempos.push(vinNextCycleStart(agora, settings.shifts));
+  }
+  return tempos.length > 0 ? Math.min(...tempos) : null;
+}
+
+function vinApplyPurge(history, settings, agora = Date.now()) {
+  const kept = settings.autoPurgeEnabled ? vinDropExpired(history, settings.shifts, agora) : history;
+  return vinDropShiftExpired(kept, settings, agora);
+}
+
+// O que a lista deve mostrar agora: no modo turno, so o turno atual (mesmo
+// que a limpeza do storage ainda nao tenha rodado).
+function vinVisibleHistory(history, settings, agora = Date.now()) {
+  return settings.shiftOnlyMode ? vinApplyPurge(history, settings, agora) : history;
+}
+
+// Turno atual (ou null).
+function vinCurrentShift(settings, agora = Date.now()) {
+  return vinShiftForTimestamp(agora, settings.shifts);
+}
+
+// Apaga do storage os VINs vencidos (dia encerrado e turnos marcados).
+// Retorna o historico atual.
 async function vinPurgeExpired() {
   const settings = await vinGetSettings();
-  if (!settings.autoPurgeEnabled) {
-    return vinGetHistory();
+  if (settings.shiftOnlyMode) {
+    await vinPurgeStatsByShift(settings);
   }
-  return vinMutateHistory((history) => vinDropExpired(history, settings.shifts));
+  // So grava quando ha algo vencido (evita escritas e eventos desnecessarios).
+  const history = await vinGetHistory();
+  const kept = vinApplyPurge(history, settings);
+  if (kept.length === history.length) {
+    return history;
+  }
+  return vinMutateHistory((current) => vinApplyPurge(current, settings));
+}
+
+// Modo turno: os indicadores tambem sao apagados no fim de cada turno.
+async function vinPurgeStatsByShift(settings, agora = Date.now()) {
+  const vigente = (record) => {
+    const shift = vinShiftForTimestamp(record.ts, settings.shifts);
+    return !shift || vinShiftOccurrenceEnd(record.ts, shift) > agora;
+  };
+  const stats = await vinStatsGetAll();
+  if (stats.every(vigente)) {
+    return;
+  }
+  await vinStatsMutate((current) => current.filter(vigente));
+}
+
+// Ocorrencia do turno que contem `timestamp`: { shift, start, end } (ms), ou null.
+function vinShiftOccurrence(timestamp, shifts) {
+  const shift = vinShiftForTimestamp(timestamp, shifts);
+  if (!shift) {
+    return null;
+  }
+  const end = vinShiftOccurrenceEnd(timestamp, shift);
+  const inicio = vinParseTime(shift.start);
+  const fim = vinParseTime(shift.end);
+  const duracao = ((fim - inicio + 1440) % 1440 || 1440) * 60000;
+  return { shift, start: end - duracao, end };
 }
 
 // Atualiza modelo, cor e pecas faltantes de um registro ja gravado.
@@ -431,4 +543,245 @@ async function vinCheckPin(pin) {
 
 async function vinSetPin(newPin) {
   await chrome.storage.local.set({ [VIN_PIN_KEY]: await vinHashPin(String(newPin)) });
+}
+
+// Linha "Reparo: ..." com o principal reparo digitado para o VIN.
+function vinBuildRepairRow(entry) {
+  if (!entry.repair) {
+    return null;
+  }
+  const row = document.createElement("div");
+  row.className = "repair-row";
+
+  const label = document.createElement("span");
+  label.className = "repair-label";
+  label.textContent = "Reparo:";
+
+  const text = document.createElement("span");
+  text.className = "repair-value";
+  text.textContent = entry.repair;
+
+  row.append(label, text);
+  return row;
+}
+
+// ---------------------------------------------------------------------------
+// VINs repetidos: "Primeiro lancamento", "Segundo lancamento"... e uma linha
+// lateral ligando os lancamentos do mesmo VIN.
+// ---------------------------------------------------------------------------
+
+const VIN_ORDINALS_F = [
+  "primeira", "segunda", "terceira", "quarta", "quinta",
+  "sexta", "sétima", "oitava", "nona", "décima",
+];
+const VIN_ORDINALS = [
+  "Primeiro", "Segundo", "Terceiro", "Quarto", "Quinto",
+  "Sexto", "Sétimo", "Oitavo", "Nono", "Décimo",
+];
+// Cor da linha de cada grupo de VIN repetido (varia de um VIN para outro).
+const VIN_GROUP_COLORS = ["#2563eb", "#ea580c", "#db2777", "#0891b2", "#16a34a", "#ca8a04"];
+const VIN_LANE_WIDTH = 12;
+
+// Para cada registro de VIN repetido: { key, ordinal, total, color }, indexado
+// pelo timestamp. O mais antigo do VIN e o primeiro lancamento.
+function vinRepeatInfo(history) {
+  const groups = new Map();
+  for (const entry of history) {
+    const key = vinCompareKey(entry.vin);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(entry);
+  }
+
+  const repeated = [...groups.entries()]
+    .filter(([, list]) => list.length > 1)
+    .sort((a, b) => Math.min(...a[1].map((e) => e.timestamp)) - Math.min(...b[1].map((e) => e.timestamp)));
+
+  const info = new Map();
+  repeated.forEach(([key, list], index) => {
+    const color = VIN_GROUP_COLORS[index % VIN_GROUP_COLORS.length];
+    [...list]
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .forEach((entry, i) => info.set(entry.timestamp, { key, ordinal: i + 1, total: list.length, color }));
+  });
+  return info;
+}
+
+function vinBuildLaunchTag(ordinal) {
+  const tag = document.createElement("span");
+  // Primeiro lancamento: preto; todos os seguintes seguem o padrao do segundo (roxo).
+  tag.className = `launch-tag launch-${Math.min(ordinal, 2)}`;
+  tag.textContent = `${VIN_ORDINALS[ordinal - 1] || `${ordinal}º`} lançamento`;
+  return tag;
+}
+
+// Marca o <li> do registro para a linha lateral (chamar vinDecorateRepeats
+// no container depois de montar a lista).
+function vinMarkRepeat(li, info) {
+  if (info) {
+    li.dataset.repeatKey = info.key;
+    li.dataset.repeatColor = info.color;
+  }
+}
+
+// Desenha, na margem esquerda do container, uma linha por VIN repetido
+// ligando seus lancamentos, com um ponto em cada um. Grupos que nao se
+// sobrepoem dividem a mesma faixa.
+function vinDecorateRepeats(container) {
+  container.querySelectorAll(".repeat-line, .repeat-dot").forEach((el) => el.remove());
+
+  const items = [...container.querySelectorAll("[data-repeat-key]")];
+  const groups = new Map();
+  items.forEach((li, index) => {
+    const key = li.dataset.repeatKey;
+    if (!groups.has(key)) {
+      groups.set(key, { color: li.dataset.repeatColor, items: [], first: index, last: index });
+    }
+    const group = groups.get(key);
+    group.items.push(li);
+    group.last = index;
+  });
+
+  const linked = [...groups.values()].filter((group) => group.items.length > 1);
+  linked.sort((a, b) => a.first - b.first);
+
+  // Faixas: o primeiro grupo livre (que ja terminou) reaproveita a faixa.
+  const laneEnds = [];
+  for (const group of linked) {
+    let lane = laneEnds.findIndex((end) => end < group.first);
+    if (lane === -1) {
+      lane = laneEnds.length;
+    }
+    laneEnds[lane] = group.last;
+    group.lane = lane;
+  }
+
+  container.style.position = "relative";
+  container.style.paddingLeft = linked.length > 0 ? `${laneEnds.length * VIN_LANE_WIDTH + 6}px` : "";
+
+  const base = container.getBoundingClientRect();
+  const center = (li) => {
+    const rect = li.getBoundingClientRect();
+    return rect.top - base.top + rect.height / 2;
+  };
+
+  for (const group of linked) {
+    const x = 3 + group.lane * VIN_LANE_WIDTH;
+    const centers = group.items.map(center);
+
+    const line = document.createElement("div");
+    line.className = "repeat-line";
+    line.style.cssText =
+      `position:absolute;width:1px;left:${x + 2}px;top:${Math.min(...centers)}px;` +
+      `height:${Math.max(...centers) - Math.min(...centers)}px;background:${group.color};`;
+    container.appendChild(line);
+
+    for (const y of centers) {
+      const dot = document.createElement("div");
+      dot.className = "repeat-dot";
+      dot.style.cssText =
+        `position:absolute;width:5px;height:5px;border-radius:50%;left:${x}px;top:${y - 2.5}px;` +
+        `background:${group.color};box-sizing:content-box;`;
+      container.appendChild(dot);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Copiar VINs e botoes de acao de cada registro
+// ---------------------------------------------------------------------------
+
+function vinFormatDateTime(timestamp) {
+  return new Date(timestamp).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+// Etiqueta compacta de data/hora do VIN: "21/10" + hora em destaque.
+function vinBuildTimeBadge(timestamp, tag = "span") {
+  const date = new Date(timestamp);
+  const badge = document.createElement(tag);
+  badge.className = "time";
+  badge.title = vinFormatDateTime(timestamp);
+
+  const dia = document.createElement("span");
+  dia.className = "time-date";
+  dia.textContent = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+
+  const hora = document.createElement("span");
+  hora.className = "time-hour";
+  hora.textContent = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  badge.append(dia, hora);
+  return badge;
+}
+
+// Texto copiado de um VIN: data/hora, modelo/cor, reparo e/ou cripple.
+function vinCopyText(entry) {
+  const parts = Array.isArray(entry.parts) ? entry.parts : [];
+  const repair = (entry.repair || "").trim();
+  const tipo =
+    repair && parts.length > 0 ? "Reparo + Cripple" : repair ? "Reparo" : parts.length > 0 ? "Cripple" : "";
+
+  const lines = [`VIN: ${entry.vin}`, `Registro: ${vinFormatDateTime(entry.timestamp)}`];
+  const modeloCor = [entry.model && `Modelo: ${entry.model}`, entry.color && `Cor: ${entry.color}`].filter(Boolean);
+  if (modeloCor.length > 0) lines.push(modeloCor.join(" | "));
+  if (tipo) lines.push(`Tipo: ${tipo}`);
+  if (repair) lines.push(`Reparo: ${repair}`);
+  if (parts.length > 0) lines.push(`Cripple: ${parts.join(", ")}`);
+  return lines.join("\n");
+}
+
+// Varios VINs (do mais antigo ao mais recente), com um titulo.
+function vinCopyTextList(entries, title) {
+  const sorted = [...entries].sort((a, b) => a.timestamp - b.timestamp);
+  return [`${title} (${sorted.length} VIN${sorted.length === 1 ? "" : "s"})`, ...sorted.map(vinCopyText)].join("\n\n");
+}
+
+// Copia e mostra a confirmacao no proprio botao.
+async function vinCopyToClipboard(text, button) {
+  const original = button.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = "Copiado!";
+  } catch (error) {
+    button.textContent = "Erro ao copiar";
+  }
+  setTimeout(() => {
+    button.textContent = original;
+  }, 1500);
+}
+
+// Botao retangular "Copiar" (amarelo) ou "Apagar" (vermelho) de um VIN.
+function vinBuildEntryButton(kind, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `entry-btn entry-btn-${kind}`;
+  button.textContent = kind === "copy" ? "Copiar" : "Apagar";
+  button.title = kind === "copy" ? "Copiar dados do VIN" : "Apagar este VIN";
+  button.addEventListener("click", () => onClick(button));
+  return button;
+}
+
+// ---------------------------------------------------------------------------
+// Prefixos de VIN por modelo
+// ---------------------------------------------------------------------------
+
+async function vinGetPrefixes() {
+  const { [VIN_PREFIX_KEY]: list } = await chrome.storage.local.get(VIN_PREFIX_KEY);
+  return Array.isArray(list) ? list : VIN_DEFAULT_PREFIXES;
+}
+
+async function vinSetPrefixes(list) {
+  const clean = list
+    .map((item) => ({ model: (item.model || "").trim(), prefix: vinNormalize(item.prefix).replace(/\s+/g, "") }))
+    .filter((item) => item.model || item.prefix);
+  await chrome.storage.local.set({ [VIN_PREFIX_KEY]: clean });
+  return clean;
 }

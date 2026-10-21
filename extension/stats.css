@@ -40,7 +40,7 @@ body {
   display: block;
   font-size: 22px;
   font-weight: 700;
-  color: #0b8043;
+  color: #111111;
   margin-top: 2px;
 }
 
@@ -102,32 +102,33 @@ body {
 }
 
 .single .bar-seg {
-  background: #0b8043;
+  background: #111111;
 }
 
-.color-legend {
+
+.cripple-list {
+  grid-column: 2 / 4;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  margin-top: 12px;
-  font-size: 12px;
-  color: #444;
+  gap: 4px;
 }
 
-.legend-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid #cfcfcf;
+.cripple-chip {
+  padding: 1px 7px;
+  font-size: 11px;
+  color: #7a2e0e;
+  background: #fff1e6;
+  border: 1px solid #f5c9a8;
+  border-radius: 10px;
 }
 
 .empty-list {
   font-size: 13px;
   color: #777;
+}
+
+#repairBars .bar-label,
+.kpi-italic .kpi-value {
+  font-style: italic;
+  font-weight: 700;
 }

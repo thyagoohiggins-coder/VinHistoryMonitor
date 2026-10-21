@@ -6,6 +6,8 @@ const REPAIR_LABEL_REGEX = /\bPRINCIPAL\s+REPAROS?\b/i;
 let repairDb = [];
 let repairInput = null;
 let repairLearned = "";
+// Reparos ja contados no VIN atual: "ts|CHAVE".
+const repairLearnedParts = new Set();
 let repairItems = [];
 let repairActive = -1;
 let repairBox = null;
@@ -71,7 +73,7 @@ function findRepairInput() {
     if (candidate.tagName === "INPUT" && !isVinCandidateInput(candidate)) {
       continue;
     }
-    if (REPAIR_LABEL_REGEX.test(getFieldLabelText(candidate, REPAIR_LABEL_REGEX))) {
+    if (REPAIR_LABEL_REGEX.test(getFieldLabelText(candidate, REPAIR_LABEL_REGEX)) && isRendered(candidate)) {
       return candidate;
     }
   }
@@ -146,12 +148,58 @@ function highlightRepair(index) {
   });
 }
 
+// A sugestao escolhida sempre soma ao que ja esta na caixa: completa o que
+// estava sendo digitado depois da ultima escolha, sem separador.
+let repairPickedValue = "";
+let repairPickedTexts = [];
+
+function splitRepairText(text) {
+  if (repairPickedValue && text.startsWith(repairPickedValue)) {
+    return { before: repairPickedValue, current: text.slice(repairPickedValue.length) };
+  }
+  repairPickedValue = "";
+  repairPickedTexts = [];
+  return { before: "", current: text };
+}
+
 function pickRepair(index) {
   const item = repairItems[index];
   if (!item || !repairInput) {
     return;
   }
-  setRepairValue(repairInput, item.text);
+  const text = getFieldValue(repairInput);
+  const { current } = splitRepairText(text);
+  // As ultimas palavras digitadas que buscaram a sugestao (ex.: "mola" ->
+  // "Mola RR LH FP.") sao trocadas; o resto fica e a sugestao entra no fim.
+  const typed = current.trim();
+  const head = text.slice(0, text.length - current.length) + current.slice(0, current.length - current.trimStart().length);
+  const words = typed.split(/(\s+)/);
+  let value = null;
+  const itemTokens = repairTokens(item.text);
+  // O trecho final e a busca que gerou a sugestao quando cada palavra dele e
+  // o comeco de alguma palavra da sugestao (ex.: "mar" -> "com marca de
+  // ferramenta"): esse trecho e trocado, nao repetido.
+  const isSearchFor = (tail) => {
+    const tokens = repairTokens(tail);
+    return (
+      tokens.length > 0 &&
+      (repairNormalize(item.text).startsWith(repairNormalize(tail)) ||
+        tokens.every((token) => itemTokens.some((cand) => cand.startsWith(token))))
+    );
+  };
+  for (let i = 0; i < words.length && value === null; i += 2) {
+    const tail = words.slice(i).join("");
+    if (isSearchFor(tail)) {
+      value = head + words.slice(0, i).join("") + item.text;
+    }
+  }
+  if (value === null) {
+    value = text + (text === "" || /\s$/.test(text) ? "" : " ") + item.text;
+  }
+  // Antes de gravar: o "change" disparado ja aprende com a escolha.
+  repairPickedValue = value;
+  repairPickedTexts.push(item.text);
+  setRepairValue(repairInput, value);
   hideRepairBox();
   repairInput.focus();
 }
@@ -186,8 +234,16 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  const query = getFieldValue(repairInput);
-  repairItems = repairSuggest(repairDb, query);
+  const { current: query } = splitRepairText(getFieldValue(repairInput));
+  // Reparos que ja estao na caixa nao aparecem de novo.
+  const used = new Set(repairPickedTexts.map(repairNormalize));
+  // Busca pelo trecho digitado; sem resultado, tenta so as ultimas palavras
+  // (ex.: "Prisioneiro solto, luz" sugere pelo "luz").
+  const words = query.trim().split(/\s+/);
+  repairItems = [];
+  for (let i = 0; i < words.length && repairItems.length === 0; i += 1) {
+    repairItems = repairSuggest(repairDb, words.slice(i).join(" ")).filter((item) => !used.has(item.key));
+  }
   if (repairItems.length === 0) {
     // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
     if (repairNormalize(query).length >= 2) {
@@ -200,8 +256,25 @@ function updateRepairSuggestions() {
   renderRepairBox();
 }
 
+// true/false: o campo PRINCIPAL REPARO esta (ou nao) na tela agora.
+function isRepairFieldPresent() {
+  if (repairInput && isRendered(repairInput)) {
+    return true;
+  }
+  return findRepairInput() !== null;
+}
+
+// Texto atual do campo de reparo ("" se nao ha campo ou esta vazio).
+function getCurrentRepairText() {
+  if (!repairInput || !isRendered(repairInput)) {
+    return "";
+  }
+  return getFieldValue(repairInput).replace(/\s+/g, " ").trim();
+}
+
 function learnRepair() {
-  if (!repairInput) {
+  // Campo escondido pelo formulario: o texto que ficou la nao vale.
+  if (!repairInput || !isRendered(repairInput)) {
     return;
   }
   const text = getFieldValue(repairInput).replace(/\s+/g, " ").trim();
@@ -216,10 +289,21 @@ function learnRepair() {
     return;
   }
   repairLearned = learnedKey;
-  repairLearn(text);
+  // Com sugestoes escolhidas, cada uma conta sozinha no banco; sem nenhuma,
+  // o texto inteiro e aprendido. Cada reparo conta uma vez por VIN.
+  splitRepairText(getFieldValue(repairInput));
+  const learned = repairPickedTexts.length > 0 ? repairPickedTexts : [text];
+  for (const part of learned) {
+    const partKey = `${currentEntryTimestamp}|${repairNormalize(part)}`;
+    if (!repairLearnedParts.has(partKey)) {
+      repairLearnedParts.add(partKey);
+      repairLearn(part);
+    }
+  }
 
-  // O reparo tambem entra nos indicadores, ligado ao VIN atual.
+  // O reparo fica junto do VIN (lista) e tambem entra nos indicadores.
   if (currentEntryTimestamp !== null) {
+    vinSetEntryDetails(currentEntryTimestamp, { repair: text });
     vinStatsUpsert(currentEntryTimestamp, { repair: text });
   }
 }
@@ -236,6 +320,8 @@ function attachRepairInput(input) {
   input.addEventListener("input", () => {
     if (!getFieldValue(input).trim()) {
       repairLearned = "";
+      repairPickedValue = "";
+      repairPickedTexts = [];
     }
     updateRepairSuggestions();
   });
@@ -275,7 +361,7 @@ window.addEventListener("resize", positionRepairBox);
 let repairScanPending = false;
 function scanRepair() {
   // Campo atual ainda na tela: nada a procurar.
-  if (repairInput && repairInput.isConnected) {
+  if (repairInput && isRendered(repairInput)) {
     return;
   }
   const input = findRepairInput();

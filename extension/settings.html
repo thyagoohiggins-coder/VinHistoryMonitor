@@ -21,25 +21,6 @@
     </header>
 
     <section class="card">
-      <h2 class="section-title">VINs</h2>
-      <label class="switch-row">
-        <span>Remover VINs já lançados repetidos automaticamente</span>
-        <input type="checkbox" id="dedupeToggle" />
-      </label>
-      <p class="hint">
-        Desativado: todos os VINs ficam na lista, mesmo os repetidos (marcados como “Já lançado”).
-        Ao ativar, a lista atual tambem e limpa, mantendo so o registro mais recente de cada VIN.
-      </p>
-      <label class="switch-row">
-        <span>Apagar VINs ao fim do 3º turno</span>
-        <input type="checkbox" id="purgeToggle" />
-      </label>
-      <p class="hint">Todos os VINs sao apagados quando o 3º turno termina (06:00). Os indicadores nao sao afetados.</p>
-      <p id="dupeStatus" class="dupe-status"></p>
-      <button id="dedupeNowBtn" class="warn-btn" type="button">Remover repetidos agora</button>
-    </section>
-
-    <section class="card">
       <h2 class="section-title">Banco de reparos</h2>
       <label class="switch-row">
         <span>Congelar banco de reparos</span>
@@ -64,7 +45,6 @@
         <ul id="repairList" class="repair-list"></ul>
         <div class="row-actions">
           <button id="exportRepairsBtn" class="link-btn" type="button">Exportar reparos (.txt)</button>
-          <button id="clearRepairsBtn" class="warn-btn" type="button">Apagar banco de reparos</button>
         </div>
       </details>
     </section>
@@ -80,8 +60,64 @@
       <p id="pinMessage" class="pin-message"></p>
 
       <div id="protectedActions" class="protected-actions" hidden>
+        <h3 class="sub-title">Modo turno</h3>
+        <label class="switch-row">
+          <span>Mostrar só o turno atual e apagar tudo no fim de cada turno</span>
+          <input type="checkbox" id="shiftOnlyToggle" />
+        </label>
+        <p class="hint">
+          Vale para todos os turnos: a lista (popup, lista de VINs, copiar) mostra so o turno atual e, quando ele termina,
+          os VINs e os indicadores daquele turno sao apagados da extensao; o processo se repete a cada turno.
+          Ligado, substitui as opcoes de apagar abaixo.
+        </p>
+
+        <h3 class="sub-title">Apagar VINs automaticamente</h3>
+        <label class="switch-row">
+          <span>Apagar todos os VINs ao fim do 3º turno (virada do dia, 06:00)</span>
+          <input type="checkbox" id="purgeToggle" />
+        </label>
+        <div id="shiftPurgeList"></div>
+        <p class="hint">
+          Marque um ou mais turnos: os VINs daquele turno sao apagados da lista quando ele termina.
+          Os indicadores nao sao afetados.
+        </p>
+
+        <h3 class="sub-title">VINs repetidos</h3>
+        <label class="switch-row">
+          <span>Remover VINs já lançados repetidos automaticamente</span>
+          <input type="checkbox" id="dedupeToggle" />
+        </label>
+        <p class="hint">
+          Desativado: todos os VINs ficam na lista, mesmo os repetidos (marcados como “Primeiro lançamento”, “Segundo lançamento”...).
+          Ao ativar, a lista atual tambem e limpa, mantendo so o registro mais recente de cada VIN.
+        </p>
+        <p id="dupeStatus" class="dupe-status"></p>
+        <button id="dedupeNowBtn" class="warn-btn" type="button">Remover repetidos agora</button>
+
+        <h3 class="sub-title">Botao Apagar</h3>
+        <label class="switch-row">
+          <span>Mostrar o botao “Apagar” em cada VIN (popup e lista)</span>
+          <input type="checkbox" id="showDeleteToggle" />
+        </label>
+
+        <h3 class="sub-title">Modelos e prefixos de VIN</h3>
+        <p class="hint">
+          Aparecem como sugestao ao clicar no campo VIN do formulario. Escolher um preenche o prefixo e marca o
+          modelo no formulario (quando o nome comeca com a opcao do formulario, ex.: “T1E ADAS (Tiggo 7)” marca “T1E ADAS”).
+        </p>
+        <div id="prefixList" class="prefix-list"></div>
+        <div class="prefix-actions">
+          <button id="prefixAddBtn" type="button" class="link-btn">+ Adicionar modelo</button>
+          <button id="prefixSaveBtn" type="button" class="save-btn">Salvar modelos</button>
+          <span id="prefixStatus" class="prefix-status"></span>
+        </div>
+
+        <h3 class="sub-title">Apagar dados</h3>
         <button id="clearHistoryBtn" class="danger-btn" type="button">Apagar histórico geral (lista de VINs)</button>
         <button id="clearStatsBtn" class="danger-btn" type="button">Apagar indicadores</button>
+        <button id="clearRepairsBtn" class="danger-btn" type="button">Apagar banco de reparos</button>
+
+        <h3 class="sub-title">PIN</h3>
         <form id="changePinForm" class="pin-row">
           <input id="newPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="Novo PIN (4 a 12 digitos)" autocomplete="off" />
           <button type="submit">Alterar PIN</button>

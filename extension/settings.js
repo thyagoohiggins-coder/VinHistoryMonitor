@@ -15,8 +15,12 @@ const unlockForm = document.getElementById("unlockForm");
 const pinInput = document.getElementById("pinInput");
 const pinMessage = document.getElementById("pinMessage");
 const protectedActions = document.getElementById("protectedActions");
+const showDeleteToggle = document.getElementById("showDeleteToggle");
+const shiftPurgeListEl = document.getElementById("shiftPurgeList");
 
 let frozen = false;
+let unlockedNow = false;
+let repairDbCache = [];
 
 // ---------------------------------------------------------------- VINs
 function renderDupes(history) {
@@ -41,6 +45,96 @@ purgeToggle.addEventListener("change", async () => {
   if (purgeToggle.checked) {
     renderDupes(await vinPurgeExpired());
   }
+});
+
+const shiftOnlyToggle = document.getElementById("shiftOnlyToggle");
+shiftOnlyToggle.addEventListener("change", async () => {
+  await vinSetSettings({ shiftOnlyMode: shiftOnlyToggle.checked });
+  renderDupes(await vinPurgeExpired());
+});
+
+showDeleteToggle.addEventListener("change", () => vinSetSettings({ showDeleteButton: showDeleteToggle.checked }));
+
+// Uma caixa por turno: apaga os VINs daquele turno quando ele termina.
+function renderShiftPurge(settings) {
+  shiftPurgeListEl.innerHTML = "";
+  for (const shift of settings.shifts) {
+    const row = document.createElement("label");
+    row.className = "switch-row";
+    const text = document.createElement("span");
+    text.textContent = `Apagar VINs do ${shift.label} ao fim dele (${shift.end})`;
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = (settings.purgeShiftIds || []).includes(shift.id);
+    box.addEventListener("change", async () => {
+      const atual = (await vinGetSettings()).purgeShiftIds || [];
+      const ids = box.checked ? [...new Set([...atual, shift.id])] : atual.filter((id) => id !== shift.id);
+      await vinSetSettings({ purgeShiftIds: ids });
+      renderDupes(await vinPurgeExpired());
+    });
+    row.append(text, box);
+    shiftPurgeListEl.appendChild(row);
+  }
+}
+
+// ------------------------------------------------- modelos e prefixos
+const prefixListEl = document.getElementById("prefixList");
+const prefixStatusEl = document.getElementById("prefixStatus");
+
+function addPrefixRow(item = { model: "", prefix: "" }) {
+  const row = document.createElement("div");
+  row.className = "prefix-row";
+
+  const model = document.createElement("input");
+  model.type = "text";
+  model.className = "prefix-model";
+  model.placeholder = "Modelo (ex.: S202 (Uni-T))";
+  model.maxLength = 60;
+  model.value = item.model;
+
+  const prefix = document.createElement("input");
+  prefix.type = "text";
+  prefix.className = "prefix-code";
+  prefix.placeholder = "Prefixo (ex.: 95PLDL61DVB)";
+  prefix.maxLength = 17;
+  prefix.value = item.prefix;
+  prefix.addEventListener("input", () => {
+    prefix.value = prefix.value.toUpperCase().replace(/\s+/g, "");
+  });
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "entry-btn entry-btn-delete";
+  del.textContent = "Remover";
+  del.addEventListener("click", () => row.remove());
+
+  for (const input of [model, prefix]) {
+    input.addEventListener("input", () => {
+      prefixStatusEl.textContent = "Alteracoes nao salvas.";
+    });
+  }
+
+  row.append(model, prefix, del);
+  prefixListEl.appendChild(row);
+  return row;
+}
+
+function renderPrefixes(list) {
+  prefixListEl.innerHTML = "";
+  list.forEach((item) => addPrefixRow(item));
+}
+
+document.getElementById("prefixAddBtn").addEventListener("click", () => {
+  addPrefixRow().querySelector("input").focus();
+});
+
+document.getElementById("prefixSaveBtn").addEventListener("click", async () => {
+  const list = [...prefixListEl.querySelectorAll(".prefix-row")].map((row) => ({
+    model: row.querySelector(".prefix-model").value,
+    prefix: row.querySelector(".prefix-code").value,
+  }));
+  renderPrefixes(await vinSetPrefixes(list));
+  prefixStatusEl.textContent = "Modelos salvos.";
 });
 
 dedupeNowBtn.addEventListener("click", async () => {
@@ -69,6 +163,7 @@ function applyFrozenState() {
 }
 
 function renderRepairs(db) {
+  repairDbCache = db;
   repairCountEl.textContent =
     db.length === 0
       ? "Nenhum reparo no banco ainda."
@@ -76,7 +171,7 @@ function renderRepairs(db) {
   clearRepairsBtn.disabled = db.length === 0;
 
   repairListEl.innerHTML = "";
-  const sorted = [...db].sort((a, b) => b.count - a.count || b.lastUsed - a.lastUsed);
+  const sorted = [...db].sort((a, b) => a.text.localeCompare(b.text, "pt-BR", { sensitivity: "base" }));
   for (const item of sorted) {
     const li = document.createElement("li");
     li.className = "repair-item";
@@ -96,6 +191,8 @@ function renderRepairs(db) {
     del.textContent = "\u{1F5D1}️";
     del.addEventListener("click", () => repairDelete(item.key));
 
+    // Remover um reparo so com a area protegida desbloqueada.
+    del.hidden = !unlockedNow;
     li.append(text, count, del);
     repairListEl.appendChild(li);
   }
@@ -147,6 +244,8 @@ clearRepairsBtn.addEventListener("click", async () => {
 
 // ------------------------------------------------------ area protegida
 function setUnlocked(unlocked) {
+  unlockedNow = unlocked;
+  renderRepairs(repairDbCache);
   protectedActions.hidden = !unlocked;
   unlockForm.hidden = unlocked;
   pinInput.value = "";
@@ -207,6 +306,10 @@ async function iniciar() {
   const settings = await vinGetSettings();
   dedupeToggle.checked = settings.dedupeEnabled;
   purgeToggle.checked = settings.autoPurgeEnabled;
+  showDeleteToggle.checked = settings.showDeleteButton !== false;
+  shiftOnlyToggle.checked = settings.shiftOnlyMode === true;
+  renderShiftPurge(settings);
+  renderPrefixes(await vinGetPrefixes());
   frozen = settings.repairFrozen === true;
   applyFrozenState();
   setUnlocked(false);
