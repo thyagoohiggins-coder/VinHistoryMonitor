@@ -1,4 +1,4 @@
-// Limpeza automatica dos VINs ao fim do 3º turno (alarme diario).
+// Limpeza automatica dos VINs ao fim do dia e dos turnos marcados.
 
 importScripts("storage.js");
 
@@ -10,16 +10,15 @@ function clearBadge() {
   chrome.action.setBadgeText({ text: "" });
 }
 
-// Agenda o alarme para a proxima virada do dia de producao (fim do 3º turno).
+// Agenda o alarme para a proxima limpeza (virada do dia ou fim de turno marcado).
 async function schedulePurge() {
   const settings = await vinGetSettings();
-  if (!settings.autoPurgeEnabled) {
+  const when = vinNextPurgeTime(Date.now(), settings);
+  if (when === null) {
     await chrome.alarms.clear(PURGE_ALARM);
     return;
   }
-  await chrome.alarms.create(PURGE_ALARM, {
-    when: vinNextCycleStart(Date.now(), settings.shifts),
-  });
+  await chrome.alarms.create(PURGE_ALARM, { when });
 }
 
 // Limpa o que ja venceu (cobre o navegador fechado na virada) e reagenda.

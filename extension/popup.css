@@ -251,10 +251,67 @@ h1 {
 }
 
 .history-item .time {
-  font-size: 11px;
-  color: #666;
-  margin-top: 2px;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111111;
+  background: #eef0f3;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin: 4px 0 2px;
 }
+
+.history-item .entry-actions {
+  margin-top: 6px;
+}
+
+.actions button.copy-all-btn {
+  margin-top: 6px;
+  color: #b7791f;
+  background: #fffbea;
+  border: 1px solid #ecc94b;
+  font-weight: 700;
+}
+
+.actions button.copy-all-btn:hover {
+  background: #fef3c7;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.entry-btn {
+  padding: 3px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  line-height: 1.4;
+}
+
+.entry-btn-copy {
+  color: #b7791f;
+  border: 1px solid #ecc94b;
+  background: #fffbea;
+}
+
+.entry-btn-copy:hover {
+  background: #fef3c7;
+}
+
+.entry-btn-delete {
+  color: #d0392f;
+  border: 1px solid #f1a9a2;
+  background: #fff5f4;
+}
+
+.entry-btn-delete:hover {
+  background: #fdeceb;
+}
+
 
 .empty-state {
   display: none;

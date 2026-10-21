@@ -169,26 +169,65 @@ h1 {
 }
 
 .day-shift-group {
-  margin-bottom: 12px;
+  margin-bottom: 22px;
+  padding: 0 0 4px 12px;
+  border-left: 5px solid #9ca3af;
+}
+
+.day-shift-group.shift-t1 {
+  border-left-color: #2563eb;
+}
+
+.day-shift-group.shift-t2 {
+  border-left-color: #d97706;
+}
+
+.day-shift-group.shift-t3 {
+  border-left-color: #7c3aed;
 }
 
 .day-shift-heading {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: #555;
+  color: #fff;
+  background: #111111;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  padding-bottom: 4px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid #ececec;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 10px;
+}
+
+.shift-t1 .day-shift-heading {
+  background: #1e3a8a;
+}
+
+.shift-t2 .day-shift-heading {
+  background: #92400e;
+}
+
+.shift-t3 .day-shift-heading {
+  background: #5b21b6;
+}
+
+.day-shift-heading .heading-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .day-shift-heading .qtd {
-  color: #111111;
+  color: #fff;
 }
 
+.day-shift-heading .entry-btn {
+  text-transform: none;
+  letter-spacing: 0;
+}
 
 .delete-entry-btn {
   margin-left: auto;
@@ -319,13 +358,24 @@ h1 {
 
 .vin-item .time {
   margin-left: auto;
-  font-size: 12px;
-  color: #666;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111111;
+  background: #eef0f3;
+  border: 1px solid #d5d9e0;
+  border-radius: 5px;
+  padding: 2px 8px;
   white-space: nowrap;
 }
 
-.vin-item .delete-entry-btn {
-  margin-left: 0;
+.vin-item .entry-actions {
+  flex-basis: 100%;
+  justify-content: flex-end;
+}
+
+.copy-filtered {
+  padding: 6px 10px;
+  font-size: 13px;
 }
 
 .empty-list {
@@ -449,4 +499,39 @@ h1 {
 .repair-value {
   font-weight: 700;
   font-style: italic;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.entry-btn {
+  padding: 3px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  line-height: 1.4;
+}
+
+.entry-btn-copy {
+  color: #b7791f;
+  border: 1px solid #ecc94b;
+  background: #fffbea;
+}
+
+.entry-btn-copy:hover {
+  background: #fef3c7;
+}
+
+.entry-btn-delete {
+  color: #d0392f;
+  border: 1px solid #f1a9a2;
+  background: #fff5f4;
+}
+
+.entry-btn-delete:hover {
+  background: #fdeceb;
 }

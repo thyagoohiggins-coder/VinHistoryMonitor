@@ -15,8 +15,12 @@ const unlockForm = document.getElementById("unlockForm");
 const pinInput = document.getElementById("pinInput");
 const pinMessage = document.getElementById("pinMessage");
 const protectedActions = document.getElementById("protectedActions");
+const showDeleteToggle = document.getElementById("showDeleteToggle");
+const shiftPurgeListEl = document.getElementById("shiftPurgeList");
 
 let frozen = false;
+let unlockedNow = false;
+let repairDbCache = [];
 
 // ---------------------------------------------------------------- VINs
 function renderDupes(history) {
@@ -42,6 +46,30 @@ purgeToggle.addEventListener("change", async () => {
     renderDupes(await vinPurgeExpired());
   }
 });
+
+showDeleteToggle.addEventListener("change", () => vinSetSettings({ showDeleteButton: showDeleteToggle.checked }));
+
+// Uma caixa por turno: apaga os VINs daquele turno quando ele termina.
+function renderShiftPurge(settings) {
+  shiftPurgeListEl.innerHTML = "";
+  for (const shift of settings.shifts) {
+    const row = document.createElement("label");
+    row.className = "switch-row";
+    const text = document.createElement("span");
+    text.textContent = `Apagar VINs do ${shift.label} ao fim dele (${shift.end})`;
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = (settings.purgeShiftIds || []).includes(shift.id);
+    box.addEventListener("change", async () => {
+      const atual = (await vinGetSettings()).purgeShiftIds || [];
+      const ids = box.checked ? [...new Set([...atual, shift.id])] : atual.filter((id) => id !== shift.id);
+      await vinSetSettings({ purgeShiftIds: ids });
+      renderDupes(await vinPurgeExpired());
+    });
+    row.append(text, box);
+    shiftPurgeListEl.appendChild(row);
+  }
+}
 
 dedupeNowBtn.addEventListener("click", async () => {
   const history = await vinGetHistory();
@@ -69,6 +97,7 @@ function applyFrozenState() {
 }
 
 function renderRepairs(db) {
+  repairDbCache = db;
   repairCountEl.textContent =
     db.length === 0
       ? "Nenhum reparo no banco ainda."
@@ -96,6 +125,8 @@ function renderRepairs(db) {
     del.textContent = "\u{1F5D1}️";
     del.addEventListener("click", () => repairDelete(item.key));
 
+    // Remover um reparo so com a area protegida desbloqueada.
+    del.hidden = !unlockedNow;
     li.append(text, count, del);
     repairListEl.appendChild(li);
   }
@@ -147,6 +178,8 @@ clearRepairsBtn.addEventListener("click", async () => {
 
 // ------------------------------------------------------ area protegida
 function setUnlocked(unlocked) {
+  unlockedNow = unlocked;
+  renderRepairs(repairDbCache);
   protectedActions.hidden = !unlocked;
   unlockForm.hidden = unlocked;
   pinInput.value = "";
@@ -207,6 +240,8 @@ async function iniciar() {
   const settings = await vinGetSettings();
   dedupeToggle.checked = settings.dedupeEnabled;
   purgeToggle.checked = settings.autoPurgeEnabled;
+  showDeleteToggle.checked = settings.showDeleteButton !== false;
+  renderShiftPurge(settings);
   frozen = settings.repairFrozen === true;
   applyFrozenState();
   setUnlocked(false);

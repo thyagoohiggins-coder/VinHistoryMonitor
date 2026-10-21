@@ -65,8 +65,8 @@ body {
 .repair-add button,
 .pin-row button {
   padding: 7px 14px;
-  border: 1px solid #0f766e;
-  background: #0f766e;
+  border: 1px solid #111111;
+  background: #111111;
   color: #fff;
   border-radius: 6px;
   font-size: 13px;
@@ -154,4 +154,29 @@ body {
 
 .pin-message.ok {
   color: #111111;
+}
+
+.sub-title {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+
+.sub-title:first-child {
+  margin-top: 4px;
+}
+
+.protected-actions .switch-row,
+.protected-actions .sub-title,
+.protected-actions .hint,
+.protected-actions .dupe-status,
+#shiftPurgeList {
+  align-self: stretch;
+}
+
+.pin-row[hidden] {
+  display: none;
 }

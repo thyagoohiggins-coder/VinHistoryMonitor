@@ -10,54 +10,7 @@ const noMatchEl = document.getElementById("noMatch");
 
 let currentShifts = VIN_DEFAULT_SHIFTS;
 let currentHistory = [];
-
-function formatTimestamp(timestamp) {
-  const date = new Date(timestamp);
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-// Texto copiado de um VIN: hora, modelo/cor, reparo e/ou cripple.
-function buildCopyText(entry) {
-  const hora = new Date(entry.timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-  const parts = Array.isArray(entry.parts) ? entry.parts : [];
-  const repair = (entry.repair || "").trim();
-  const tipo =
-    repair && parts.length > 0 ? "Reparo + Cripple" : repair ? "Reparo" : parts.length > 0 ? "Cripple" : "";
-
-  const lines = [`VIN: ${entry.vin}`, `Hora: ${hora}`];
-  const modeloCor = [entry.model && `Modelo: ${entry.model}`, entry.color && `Cor: ${entry.color}`].filter(Boolean);
-  if (modeloCor.length > 0) lines.push(modeloCor.join(" | "));
-  if (tipo) lines.push(`Tipo: ${tipo}`);
-  if (repair) lines.push(`Reparo: ${repair}`);
-  if (parts.length > 0) lines.push(`Cripple: ${parts.join(", ")}`);
-  return lines.join("\n");
-}
-
-async function copyEntry(entry, button) {
-  try {
-    await navigator.clipboard.writeText(buildCopyText(entry));
-    button.textContent = "\u2714";
-    button.title = "Copiado!";
-  } catch (error) {
-    button.textContent = "\u2716";
-    button.title = "Nao foi possivel copiar";
-  }
-  setTimeout(() => {
-    button.textContent = "\u{1F4CB}";
-    button.title = "Copiar dados do VIN";
-  }, 1500);
-}
+let showDelete = true;
 
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
@@ -138,28 +91,20 @@ function render(history) {
       vinRow.appendChild(vinBuildLaunchTag(repeat.ordinal));
     }
 
-    const copyBtn = document.createElement("button");
-    copyBtn.className = "copy-entry-btn";
-    copyBtn.title = "Copiar dados do VIN";
-    copyBtn.setAttribute("aria-label", "Copiar dados do VIN");
-    copyBtn.textContent = "\u{1F4CB}";
-    copyBtn.addEventListener("click", () => copyEntry(entry, copyBtn));
-    vinRow.appendChild(copyBtn);
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "delete-entry-btn";
-    deleteBtn.title = "Apagar este VIN";
-    deleteBtn.setAttribute("aria-label", "Apagar este VIN");
-    deleteBtn.textContent = "\u{1F5D1}️";
-    deleteBtn.addEventListener("click", async () => {
-      const remaining = await vinDeleteEntry(entry.timestamp);
-      render(remaining);
-    });
-    vinRow.appendChild(deleteBtn);
+    const buttons = document.createElement("div");
+    buttons.className = "entry-actions";
+    buttons.appendChild(vinBuildEntryButton("copy", (button) => vinCopyToClipboard(vinCopyText(entry), button)));
+    if (showDelete) {
+      buttons.appendChild(
+        vinBuildEntryButton("delete", async () => {
+          render(await vinDeleteEntry(entry.timestamp));
+        })
+      );
+    }
 
     const timeEl = document.createElement("div");
     timeEl.className = "time";
-    timeEl.textContent = formatTimestamp(entry.timestamp);
+    timeEl.textContent = vinFormatDateTime(entry.timestamp);
 
     li.appendChild(vinRow);
     li.appendChild(timeEl);
@@ -172,6 +117,7 @@ function render(history) {
     if (partsRow) {
       li.appendChild(partsRow);
     }
+    li.appendChild(buttons);
     listEl.appendChild(li);
   }
 
@@ -196,17 +142,32 @@ function openPage(file) {
 
 document.getElementById("openListBtn").addEventListener("click", () => openPage("history.html"));
 document.getElementById("openStatsBtn").addEventListener("click", () => openPage("stats.html"));
+// Todos os VINs do dia de producao atual.
+document.getElementById("copyDayBtn").addEventListener("click", (event) => {
+  const inicio = vinCycleStart(Date.now(), currentShifts);
+  const doDia = currentHistory.filter((entry) => entry.timestamp >= inicio);
+  vinCopyToClipboard(vinCopyTextList(doDia, "VINs do dia"), event.currentTarget);
+});
+
 document.getElementById("openSettingsBtn").addEventListener("click", () => openPage("settings.html"));
 
 async function load() {
   const settings = await vinGetSettings();
   currentShifts = settings.shifts;
+  showDelete = settings.showDeleteButton !== false;
   // Limpa o que ja venceu antes de mostrar a lista.
   render(await vinPurgeExpired());
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[VIN_STORAGE_KEY]) {
+  if (area !== "local") {
+    return;
+  }
+  if (changes[VIN_SETTINGS_KEY]) {
+    showDelete = (changes[VIN_SETTINGS_KEY].newValue || {}).showDeleteButton !== false;
+    render(currentHistory);
+  }
+  if (changes[VIN_STORAGE_KEY]) {
     render(changes[VIN_STORAGE_KEY].newValue || []);
   }
 });

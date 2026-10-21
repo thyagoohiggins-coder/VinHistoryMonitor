@@ -25,6 +25,10 @@ const VIN_DEFAULT_SETTINGS = {
   autoPurgeEnabled: true,
   // Banco de reparos congelado: nao aprende nem aceita reparos novos.
   repairFrozen: false,
+  // Mostra o botao "Apagar" em cada VIN (popup e lista).
+  showDeleteButton: true,
+  // Turnos cujos VINs sao apagados automaticamente quando o turno termina.
+  purgeShiftIds: [],
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -182,20 +186,71 @@ function vinDropExpired(history, shifts, agora = Date.now()) {
   return history.filter((entry) => entry.timestamp >= limite);
 }
 
-// Apaga do storage os VINs de dias encerrados. Retorna o historico atual.
+// Fim (ms) da ocorrencia do turno que contem `timestamp`. Turnos que
+// atravessam a meia-noite terminam no dia seguinte.
+function vinShiftOccurrenceEnd(timestamp, shift) {
+  const inicio = vinParseTime(shift.start);
+  const fim = vinParseTime(shift.end);
+  const data = new Date(timestamp);
+  const minutos = vinMinutesOfDay(timestamp);
+  data.setHours(Math.floor(fim / 60), fim % 60, 0, 0);
+  if (fim <= inicio && minutos >= inicio) {
+    data.setDate(data.getDate() + 1);
+  }
+  return data.getTime();
+}
+
+// Proximo fim (ms) de um turno depois de `agora`.
+function vinNextShiftEnd(agora, shift) {
+  const fim = vinParseTime(shift.end);
+  const data = new Date(agora);
+  data.setHours(Math.floor(fim / 60), fim % 60, 0, 0);
+  if (data.getTime() <= agora) {
+    data.setDate(data.getDate() + 1);
+  }
+  return data.getTime();
+}
+
+// Historico sem os VINs dos turnos marcados para apagar que ja terminaram.
+function vinDropShiftExpired(history, settings, agora = Date.now()) {
+  const ids = settings.purgeShiftIds || [];
+  if (ids.length === 0) {
+    return history;
+  }
+  return history.filter((entry) => {
+    const shift = vinShiftForTimestamp(entry.timestamp, settings.shifts);
+    return !shift || !ids.includes(shift.id) || vinShiftOccurrenceEnd(entry.timestamp, shift) > agora;
+  });
+}
+
+// Proxima limpeza automatica (fim do dia ou fim de um turno marcado), ou null.
+function vinNextPurgeTime(agora, settings) {
+  const tempos = (settings.purgeShiftIds || [])
+    .map((id) => settings.shifts.find((shift) => shift.id === id))
+    .filter(Boolean)
+    .map((shift) => vinNextShiftEnd(agora, shift));
+  if (settings.autoPurgeEnabled) {
+    tempos.push(vinNextCycleStart(agora, settings.shifts));
+  }
+  return tempos.length > 0 ? Math.min(...tempos) : null;
+}
+
+function vinApplyPurge(history, settings, agora = Date.now()) {
+  const kept = settings.autoPurgeEnabled ? vinDropExpired(history, settings.shifts, agora) : history;
+  return vinDropShiftExpired(kept, settings, agora);
+}
+
+// Apaga do storage os VINs vencidos (dia encerrado e turnos marcados).
+// Retorna o historico atual.
 async function vinPurgeExpired() {
   const settings = await vinGetSettings();
-  if (!settings.autoPurgeEnabled) {
-    return vinGetHistory();
-  }
-
   // So grava quando ha algo vencido (evita escritas e eventos desnecessarios).
   const history = await vinGetHistory();
-  const kept = vinDropExpired(history, settings.shifts);
+  const kept = vinApplyPurge(history, settings);
   if (kept.length === history.length) {
     return history;
   }
-  return vinMutateHistory((current) => vinDropExpired(current, settings.shifts));
+  return vinMutateHistory((current) => vinApplyPurge(current, settings));
 }
 
 // Atualiza modelo, cor e pecas faltantes de um registro ja gravado.
@@ -577,4 +632,66 @@ function vinDecorateRepeats(container) {
       container.appendChild(dot);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Copiar VINs e botoes de acao de cada registro
+// ---------------------------------------------------------------------------
+
+function vinFormatDateTime(timestamp) {
+  return new Date(timestamp).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+// Texto copiado de um VIN: data/hora, modelo/cor, reparo e/ou cripple.
+function vinCopyText(entry) {
+  const parts = Array.isArray(entry.parts) ? entry.parts : [];
+  const repair = (entry.repair || "").trim();
+  const tipo =
+    repair && parts.length > 0 ? "Reparo + Cripple" : repair ? "Reparo" : parts.length > 0 ? "Cripple" : "";
+
+  const lines = [`VIN: ${entry.vin}`, `Registro: ${vinFormatDateTime(entry.timestamp)}`];
+  const modeloCor = [entry.model && `Modelo: ${entry.model}`, entry.color && `Cor: ${entry.color}`].filter(Boolean);
+  if (modeloCor.length > 0) lines.push(modeloCor.join(" | "));
+  if (tipo) lines.push(`Tipo: ${tipo}`);
+  if (repair) lines.push(`Reparo: ${repair}`);
+  if (parts.length > 0) lines.push(`Cripple: ${parts.join(", ")}`);
+  return lines.join("\n");
+}
+
+// Varios VINs (do mais antigo ao mais recente), com um titulo.
+function vinCopyTextList(entries, title) {
+  const sorted = [...entries].sort((a, b) => a.timestamp - b.timestamp);
+  return [`${title} (${sorted.length} VIN${sorted.length === 1 ? "" : "s"})`, ...sorted.map(vinCopyText)].join("\n\n");
+}
+
+// Copia e mostra a confirmacao no proprio botao.
+async function vinCopyToClipboard(text, button) {
+  const original = button.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = "Copiado!";
+  } catch (error) {
+    button.textContent = "Erro ao copiar";
+  }
+  setTimeout(() => {
+    button.textContent = original;
+  }, 1500);
+}
+
+// Botao retangular "Copiar" (amarelo) ou "Apagar" (vermelho) de um VIN.
+function vinBuildEntryButton(kind, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `entry-btn entry-btn-${kind}`;
+  button.textContent = kind === "copy" ? "Copiar" : "Apagar";
+  button.title = kind === "copy" ? "Copiar dados do VIN" : "Apagar este VIN";
+  button.addEventListener("click", () => onClick(button));
+  return button;
 }

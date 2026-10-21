@@ -15,6 +15,8 @@ const filterCountEl = document.getElementById("filterCount");
 let currentHistory = [];
 let currentShifts = VIN_DEFAULT_SHIFTS;
 let autoPurge = true;
+let showDelete = true;
+let purgeShiftIds = [];
 
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
@@ -44,23 +46,25 @@ function renderShiftCounts(history, shifts) {
   }
 }
 
-function formatTime(timestamp) {
-  return new Date(timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+function renderPurgeInfo() {
+  const textos = [];
+  if (autoPurge) {
+    const proxima = new Date(vinNextCycleStart(Date.now(), currentShifts));
+    const hora = proxima.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const dia = proxima.toLocaleDateString("pt-BR");
+    textos.push(`Os VINs sao apagados automaticamente no fim do 3º turno (proxima limpeza: ${dia} as ${hora}).`);
+  }
+  const turnos = currentShifts.filter((shift) => purgeShiftIds.includes(shift.id)).map((shift) => shift.label);
+  if (turnos.length > 0) {
+    textos.push(`VINs apagados ao fim do turno: ${turnos.join(", ")}.`);
+  }
+  purgeInfoEl.textContent = textos.length > 0 ? textos.join(" ") : "Limpeza automatica desativada.";
 }
 
-function renderPurgeInfo() {
-  if (!autoPurge) {
-    purgeInfoEl.textContent = "Limpeza automatica desativada (ative no popup da extensao).";
-    return;
-  }
-  const proxima = new Date(vinNextCycleStart(Date.now(), currentShifts));
-  const hora = proxima.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  const dia = proxima.toLocaleDateString("pt-BR");
-  purgeInfoEl.textContent = `Os VINs sao apagados automaticamente no fim do 3º turno (proxima limpeza: ${dia} as ${hora}).`;
+function applySettings(settings) {
+  autoPurge = settings.autoPurgeEnabled;
+  showDelete = settings.showDeleteButton !== false;
+  purgeShiftIds = settings.purgeShiftIds || [];
 }
 
 function buildEntry(entry, repeats) {
@@ -86,16 +90,8 @@ function buildEntry(entry, repeats) {
 
   const timeEl = document.createElement("span");
   timeEl.className = "time";
-  timeEl.textContent = formatTime(entry.timestamp);
+  timeEl.textContent = vinFormatDateTime(entry.timestamp);
   li.appendChild(timeEl);
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "delete-entry-btn";
-  deleteBtn.title = "Apagar este VIN";
-  deleteBtn.setAttribute("aria-label", "Apagar este VIN");
-  deleteBtn.textContent = "\u{1F5D1}️";
-  deleteBtn.addEventListener("click", () => vinDeleteEntry(entry.timestamp));
-  li.appendChild(deleteBtn);
 
   const repairRow = vinBuildRepairRow(entry);
   if (repairRow) {
@@ -106,6 +102,14 @@ function buildEntry(entry, repeats) {
   if (partsRow) {
     li.appendChild(partsRow);
   }
+
+  const buttons = document.createElement("div");
+  buttons.className = "entry-actions";
+  buttons.appendChild(vinBuildEntryButton("copy", (button) => vinCopyToClipboard(vinCopyText(entry), button)));
+  if (showDelete) {
+    buttons.appendChild(vinBuildEntryButton("delete", () => vinDeleteEntry(entry.timestamp)));
+  }
+  li.appendChild(buttons);
 
   return li;
 }
@@ -203,7 +207,7 @@ function renderList() {
 
   for (const grupo of vinGroupByShift(filtrado, currentShifts)) {
     const section = document.createElement("section");
-    section.className = "day-shift-group";
+    section.className = "day-shift-group" + (grupo.shift ? ` shift-${grupo.shift.id}` : " no-shift");
 
     const titulo = document.createElement("div");
     titulo.className = "day-shift-heading";
@@ -217,8 +221,22 @@ function renderList() {
     qtd.className = "qtd";
     qtd.textContent = `${grupo.entries.length} VIN${grupo.entries.length === 1 ? "" : "s"}`;
 
+    const lado = document.createElement("span");
+    lado.className = "heading-side";
+    lado.appendChild(qtd);
+    if (grupo.entries.length > 0) {
+      const copyShift = document.createElement("button");
+      copyShift.type = "button";
+      copyShift.className = "entry-btn entry-btn-copy";
+      copyShift.textContent = "Copiar turno";
+      copyShift.addEventListener("click", () =>
+        vinCopyToClipboard(vinCopyTextList(grupo.entries, nome.textContent), copyShift)
+      );
+      lado.appendChild(copyShift);
+    }
+
     titulo.appendChild(nome);
-    titulo.appendChild(qtd);
+    titulo.appendChild(lado);
     section.appendChild(titulo);
 
     const ul = document.createElement("ul");
@@ -261,6 +279,11 @@ for (const el of [searchInput, repairFilter, timeFrom, timeTo]) {
 for (const el of [modelFilter, colorFilter, timeFrom, timeTo]) {
   el.addEventListener("change", renderList);
 }
+document.getElementById("copyFilteredBtn").addEventListener("click", (event) => {
+  const title = hasActiveFilter() ? "VINs filtrados" : "Todos os VINs da lista";
+  vinCopyToClipboard(vinCopyTextList(applyFilters(currentHistory), title), event.currentTarget);
+});
+
 clearFiltersBtn.addEventListener("click", () => {
   for (const el of [searchInput, modelFilter, colorFilter, timeFrom, timeTo, repairFilter]) {
     el.value = "";
@@ -275,7 +298,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
   if (changes[VIN_SETTINGS_KEY]) {
     const settings = { ...VIN_DEFAULT_SETTINGS, ...(changes[VIN_SETTINGS_KEY].newValue || {}) };
-    autoPurge = settings.autoPurgeEnabled;
+    applySettings(settings);
     renderPurgeInfo();
     render(currentHistory);
   }
@@ -288,7 +311,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 async function iniciar() {
   const settings = await vinGetSettings();
   currentShifts = settings.shifts;
-  autoPurge = settings.autoPurgeEnabled;
+  applySettings(settings);
   renderPurgeInfo();
   // Limpa o que ja venceu antes de mostrar a lista.
   render(await vinPurgeExpired());
