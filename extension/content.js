@@ -39,6 +39,11 @@ async function saveVin(rawValue) {
     return;
   }
 
+  // So o prefixo sugerido (VIN ainda incompleto): nao grava.
+  if (typeof prefixList !== "undefined" && prefixList.some((item) => vinCompareKey(item.prefix) === vinCompareKey(vin))) {
+    return;
+  }
+
   recordedValue = vin;
 
   const details = readFormDetails();

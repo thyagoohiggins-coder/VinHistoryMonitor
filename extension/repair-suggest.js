@@ -328,6 +328,14 @@ function learnRepair() {
   }
   const text = getFieldValue(repairInput).replace(/\s+/g, " ").trim();
   if (!text) {
+    // Reparo apagado da caixa: tira tambem do VIN atual (lista e indicadores),
+    // desde que o campo VIN ainda mostre esse mesmo VIN.
+    const vinAtual =
+      currentVinInput && currentVinInput.isConnected && vinNormalize(getFieldValue(currentVinInput)) === recordedValue;
+    if (currentEntryTimestamp !== null && vinAtual) {
+      vinSetEntryDetails(currentEntryTimestamp, { repair: "" });
+      vinStatsUpsert(currentEntryTimestamp, { repair: "" });
+    }
     repairLearned = "";
     return;
   }
