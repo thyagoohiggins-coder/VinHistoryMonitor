@@ -44,6 +44,8 @@ const VIN_DEFAULT_SETTINGS = {
   prefixSuggestEnabled: true,
   // Aviso no formulario quando o VIN digitado ja foi lancado antes.
   repeatNoticeEnabled: true,
+  // Letras minimas digitadas para o banco de reparos sugerir.
+  repairMinChars: 2,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -733,6 +735,7 @@ function vinCopyText(entry) {
   const modeloCor = [entry.model && `Modelo: ${entry.model}`, entry.color && `Cor: ${entry.color}`].filter(Boolean);
   if (modeloCor.length > 0) lines.push(modeloCor.join(" | "));
   if (tipo) lines.push(`Tipo: ${tipo}`);
+  if (entry.level) lines.push(`Criticidade: N${entry.level}`);
   if (repair) lines.push(`Reparo: ${repair}`);
   if (parts.length > 0) lines.push(`Cripple: ${parts.join(", ")}`);
   return lines.join("\n");
@@ -784,4 +787,69 @@ async function vinSetPrefixes(list) {
     .filter((item) => item.model || item.prefix);
   await chrome.storage.local.set({ [VIN_PREFIX_KEY]: clean });
   return clean;
+}
+
+// ---------------------------------------------------------------------------
+// Visao do VIN para a lista: reparos (inclusive "reparo - ..." escrito em
+// "Outra" do cripple) e a criticidade (N1-N4) do banco de reparos.
+// ---------------------------------------------------------------------------
+
+const VIN_REPAIR_DB_KEY = "repairDb";
+const VIN_PART_AS_REPAIR_REGEX = /^\s*(?:outr[ao]s?\s*:\s*)?reparo\s*-+>?\s*(.*)$/i;
+
+function vinRepairKey(text) {
+  return (text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+async function vinGetRepairDb() {
+  const { [VIN_REPAIR_DB_KEY]: db = [] } = await chrome.storage.local.get(VIN_REPAIR_DB_KEY);
+  return Array.isArray(db) ? db : [];
+}
+
+// Maior criticidade (1-4) entre os reparos do banco presentes no texto, ou 0.
+function vinRepairLevel(repairText, repairDb) {
+  const texto = ` ${vinRepairKey(repairText)} `;
+  if (texto.trim() === "") return 0;
+  let level = 0;
+  for (const item of repairDb || []) {
+    if (item.level > level && item.key && texto.includes(` ${item.key} `)) {
+      level = item.level;
+    }
+  }
+  return level;
+}
+
+// Copia do registro com: cripples sem os "reparo - ...", esses textos somados
+// ao reparo, e `level` (0 = sem criticidade).
+function vinEntryView(entry, repairDb) {
+  const repairs = [];
+  if ((entry.repair || "").trim()) repairs.push(entry.repair.trim());
+  let parts = entry.parts;
+  if (Array.isArray(entry.parts)) {
+    parts = [];
+    for (const part of entry.parts) {
+      const match = VIN_PART_AS_REPAIR_REGEX.exec(part || "");
+      if (match) {
+        if (match[1].trim()) repairs.push(match[1].trim());
+      } else {
+        parts.push(part);
+      }
+    }
+  }
+  const repair = repairs.join(", ");
+  return { ...entry, repair, parts, level: vinRepairLevel(repair, repairDb) };
+}
+
+// Etiqueta "N1".."N4" (null sem criticidade).
+function vinBuildLevelBadge(level) {
+  if (!level) return null;
+  const badge = document.createElement("span");
+  badge.className = `level-badge level-${level}`;
+  badge.textContent = `N${level}`;
+  return badge;
 }

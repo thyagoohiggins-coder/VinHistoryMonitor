@@ -11,14 +11,22 @@ const repairLearnedParts = new Set();
 let repairItems = [];
 let repairActive = -1;
 let repairBox = null;
+let repairMinChars = 2;
 
 repairGetAll().then((db) => {
   repairDb = db;
 });
+vinGetSettings().then((settings) => {
+  repairMinChars = settings.repairMinChars || 2;
+});
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[REPAIR_STORAGE_KEY]) {
+  if (area !== "local") return;
+  if (changes[REPAIR_STORAGE_KEY]) {
     repairDb = changes[REPAIR_STORAGE_KEY].newValue || [];
+  }
+  if (changes[VIN_SETTINGS_KEY]) {
+    repairMinChars = (changes[VIN_SETTINGS_KEY].newValue || {}).repairMinChars || 2;
   }
 });
 
@@ -82,13 +90,27 @@ function findRepairInput() {
 
 function setRepairValue(input, text) {
   if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
-    // O setter nativo faz o React/Forms perceber a mudanca.
-    const proto = input.tagName === "INPUT" ? HTMLInputElement : HTMLTextAreaElement;
-    Object.getOwnPropertyDescriptor(proto.prototype, "value").set.call(input, text);
+    // Primeiro como se fosse digitado (selecionar tudo + inserir): o Forms
+    // atualiza o proprio estado sem misturar com o texto antigo. Se o
+    // navegador nao aceitar, usa o setter nativo.
+    input.focus();
+    input.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("insertText", false, text);
+    } catch (error) {
+      ok = false;
+    }
+    if (!ok || input.value !== text) {
+      const proto = input.tagName === "INPUT" ? HTMLInputElement : HTMLTextAreaElement;
+      Object.getOwnPropertyDescriptor(proto.prototype, "value").set.call(input, text);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    input.setSelectionRange(text.length, text.length);
   } else {
     input.textContent = text;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
   }
-  input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
@@ -143,7 +165,8 @@ function positionRepairBox() {
 
 function highlightRepair(index) {
   repairActive = index;
-  [...repairBox.children].forEach((child, i) => {
+  // O primeiro filho e o titulo: os itens comecam no segundo.
+  [...repairBox.children].slice(1).forEach((child, i) => {
     child.style.background = i === index ? "#e0f2f1" : "transparent";
   });
 }
@@ -155,7 +178,12 @@ let repairPickedTexts = [];
 
 // Separadores entre reparos digitados a mao: "falha no ABS, fluido de freio".
 const REPAIR_SEPARATOR_REGEX = /[,;\n]/g;
+// Cada reparo novo e buscado pelas suas duas primeiras palavras: depois da
+// segunda palavra e de um espaco, a proxima letra ja comeca outro reparo.
+const REPAIR_GROUP_WORDS = 2;
 
+// { before, current }: `current` e o trecho do reparo que esta sendo digitado
+// (o que busca as sugestoes e e trocado ao escolher); `before` e o resto.
 function splitRepairText(text) {
   let before = "";
   let current = text;
@@ -166,14 +194,25 @@ function splitRepairText(text) {
     repairPickedValue = "";
     repairPickedTexts = [];
   }
-  // O trecho em digitacao comeca depois da ultima virgula (ou ; / quebra de linha).
   let cut = -1;
   for (const match of current.matchAll(REPAIR_SEPARATOR_REGEX)) cut = match.index;
   if (cut !== -1) {
     before += current.slice(0, cut + 1);
     current = current.slice(cut + 1);
   }
-  return { before, current };
+
+  const words = [...current.matchAll(/\S+/g)];
+  if (words.length === 0) {
+    return { before: before + current, current: "" };
+  }
+  const endsWithSpace = /\s$/.test(current);
+  if (endsWithSpace && words.length % REPAIR_GROUP_WORDS === 0) {
+    // Duas palavras e um espaco: o proximo reparo ainda nao comecou.
+    return { before: before + current, current: "" };
+  }
+  const start = Math.floor((words.length - 1) / REPAIR_GROUP_WORDS) * REPAIR_GROUP_WORDS;
+  const index = words[start].index;
+  return { before: before + current.slice(0, index), current: current.slice(index) };
 }
 
 function pickRepair(index) {
@@ -182,33 +221,27 @@ function pickRepair(index) {
     return;
   }
   const text = getFieldValue(repairInput);
-  const { current } = splitRepairText(text);
-  // As ultimas palavras digitadas que buscaram a sugestao (ex.: "mola" ->
-  // "Mola RR LH FP.") sao trocadas; o resto fica e a sugestao entra no fim.
+  const { before, current } = splitRepairText(text);
   const typed = current.trim();
-  const head = text.slice(0, text.length - current.length) + current.slice(0, current.length - current.trimStart().length);
-  const words = typed.split(/(\s+)/);
-  let value = null;
+  // O trecho em digitacao e a busca que gerou a sugestao quando cada palavra
+  // dele e o comeco de alguma palavra da sugestao (ex.: "Ma" -> "marca de
+  // ferramenta"): ele e trocado pela sugestao, nunca repetido.
   const itemTokens = repairTokens(item.text);
-  // O trecho final e a busca que gerou a sugestao quando cada palavra dele e
-  // o comeco de alguma palavra da sugestao (ex.: "mar" -> "com marca de
-  // ferramenta"): esse trecho e trocado, nao repetido.
-  const isSearchFor = (tail) => {
-    const tokens = repairTokens(tail);
-    return (
-      tokens.length > 0 &&
-      (repairNormalize(item.text).startsWith(repairNormalize(tail)) ||
-        tokens.every((token) => itemTokens.some((cand) => cand.startsWith(token))))
-    );
-  };
-  for (let i = 0; i < words.length && value === null; i += 2) {
-    const tail = words.slice(i).join("");
-    if (isSearchFor(tail)) {
-      value = head + words.slice(0, i).join("") + item.text;
-    }
-  }
-  if (value === null) {
-    value = text + (text === "" || /\s$/.test(text) ? "" : " ") + item.text;
+  const tokens = repairTokens(typed);
+  const isSearch =
+    tokens.length > 0 &&
+    (repairNormalize(item.text).startsWith(repairNormalize(typed)) ||
+      tokens.every((token) => itemTokens.some((cand) => cand.startsWith(token))));
+  let value;
+  if (!typed || isSearch) {
+    value = before + item.text;
+  } else {
+    // Busca pela ultima palavra (ex.: "solto luz" -> "Luz de cortesia").
+    const last = typed.split(/\s+/).pop();
+    const lastIsSearch = itemTokens.some((cand) => cand.startsWith(repairNormalize(last)));
+    value = lastIsSearch
+      ? before + current.slice(0, current.lastIndexOf(last)) + item.text
+      : text + (/\s$/.test(text) ? "" : " ") + item.text;
   }
   // Antes de gravar: o "change" disparado ja aprende com a escolha.
   repairPickedValue = value;
@@ -248,25 +281,25 @@ function updateRepairSuggestions() {
     hideRepairBox();
     return;
   }
-  const { before, current: query } = splitRepairText(getFieldValue(repairInput));
+  const { before, current } = splitRepairText(getFieldValue(repairInput));
+  const query = current.trim();
   // Reparos que ja estao na caixa (escolhidos ou digitados) nao aparecem de novo.
   const used = new Set(repairPickedTexts.map(repairNormalize));
   const beforeNorm = ` ${repairNormalize(before)} `;
   const isUsed = (item) => used.has(item.key) || beforeNorm.includes(` ${item.key} `);
-  // Busca pelo trecho digitado; sem resultado, tenta so as ultimas palavras
-  // (ex.: "Prisioneiro solto, luz" sugere pelo "luz").
-  const words = query.trim().split(/\s+/);
-  repairItems = [];
-  for (let i = 0; i < words.length && repairItems.length === 0; i += 1) {
-    repairItems = repairSuggest(repairDb, words.slice(i).join(" ")).filter((item) => !isUsed(item));
+
+  if (repairNormalize(query).replace(/ /g, "").length < repairMinChars) {
+    hideRepairBox();
+    return;
+  }
+  // Todas as sugestoes que combinam; sem nenhuma, tenta so a ultima palavra.
+  repairItems = repairSuggest(repairDb, query, Infinity, repairMinChars).filter((item) => !isUsed(item));
+  const last = query.split(/\s+/).pop();
+  if (repairItems.length === 0 && last !== query && repairNormalize(last).length >= repairMinChars) {
+    repairItems = repairSuggest(repairDb, last, Infinity, repairMinChars).filter((item) => !isUsed(item));
   }
   if (repairItems.length === 0) {
-    // Com texto digitado, avisa que a extensao esta ativa mas nada combinou.
-    if (repairNormalize(query).length >= 2) {
-      renderRepairBox(`Nenhum reparo parecido (${repairDb.length} no banco)`);
-    } else {
-      hideRepairBox();
-    }
+    renderRepairBox(`Nenhum reparo parecido (${repairDb.length} no banco)`);
     return;
   }
   renderRepairBox();

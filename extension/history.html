@@ -47,6 +47,14 @@
       <label class="time-filter">
         ate <input id="timeTo" type="time" />
       </label>
+      <select id="levelFilter" title="Criticidade">
+        <option value="">Todas criticidades</option>
+        <option value="1">N1</option>
+        <option value="2">N2</option>
+        <option value="3">N3</option>
+        <option value="4">N4</option>
+        <option value="0">Sem criticidade</option>
+      </select>
       <input id="repairFilter" type="search" placeholder="Reparo..." autocomplete="off" />
       <button id="clearFilters" type="button" class="clear-filters">Limpar filtros</button>
       <button id="copyFilteredBtn" type="button" class="entry-btn entry-btn-copy copy-filtered">Copiar VINs filtrados</button>
@@ -57,6 +65,7 @@
 
 
     <script src="storage.js"></script>
+    <script src="repairs.js"></script>
     <script src="history.js"></script>
   </body>
 </html>

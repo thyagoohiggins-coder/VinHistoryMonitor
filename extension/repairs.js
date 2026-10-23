@@ -99,6 +99,19 @@ async function repairTeachMany(lines) {
   return added;
 }
 
+// Criticidade de um reparo do banco: 1 (N1) a 4 (N4), ou null para nenhuma.
+function repairSetLevel(key, level) {
+  return repairMutate((db) =>
+    db.map((item) => {
+      if (item.key !== key) return item;
+      const next = { ...item };
+      if (level >= 1 && level <= 4) next.level = level;
+      else delete next.level;
+      return next;
+    })
+  );
+}
+
 function repairDelete(key) {
   return repairMutate((db) => db.filter((item) => item.key !== key));
 }
@@ -145,9 +158,9 @@ function repairTokenScore(queryToken, candidateToken, isLast) {
 // 3) o texto aparece no meio do reparo;
 // 4) palavras parecidas (tolera erro de digitacao).
 // Dentro de cada grupo, os mais usados e recentes vem antes.
-function repairSuggest(db, query, limit = 8) {
+function repairSuggest(db, query, limit = Infinity, minChars = 2) {
   const queryNorm = repairNormalize(query);
-  if (queryNorm.length < 2) {
+  if (queryNorm.length < minChars) {
     return [];
   }
   const queryTokens = queryNorm.split(" ");
@@ -163,7 +176,7 @@ function repairSuggest(db, query, limit = 8) {
       score = 10 + (queryNorm.length / item.key.length) * 2;
     } else if (item.key.includes(` ${queryNorm}`)) {
       score = 8 + (queryNorm.length / item.key.length);
-    } else if (queryNorm.length >= 3 && item.key.includes(queryNorm)) {
+    } else if (queryNorm.length >= Math.max(minChars, 3) && item.key.includes(queryNorm)) {
       score = 6;
     } else {
       const candTokens = item.key.split(" ");

@@ -30,6 +30,11 @@
         Congelado: o banco nao aprende reparos novos e nao aceita adicionar outros
         (as sugestoes continuam funcionando com o que ja existe).
       </p>
+      <label class="switch-row">
+        <span>Letras mínimas para sugerir reparos</span>
+        <input type="number" id="minCharsInput" min="1" max="6" step="1" class="num-input" />
+      </label>
+      <p class="hint">Com menos letras digitadas do que isso, o formulario nao mostra sugestoes.</p>
       <p id="repairCount" class="hint"></p>
       <form id="repairAddForm" class="repair-add">
         <input id="repairAddInput" type="text" maxlength="300" placeholder="Ensinar novo reparo..." autocomplete="off" />
@@ -41,7 +46,7 @@
         <button id="repairBulkBtn" class="warn-btn" type="button">Importar</button>
       </details>
       <details class="bulk">
-        <summary>Ver reparos aprendidos</summary>
+        <summary>Ver reparos aprendidos (e criticidade N1–N4)</summary>
         <ul id="repairList" class="repair-list"></ul>
         <div class="row-actions">
           <button id="exportRepairsBtn" class="link-btn" type="button">Exportar reparos (.txt)</button>

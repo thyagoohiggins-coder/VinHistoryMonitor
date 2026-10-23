@@ -12,6 +12,7 @@ let currentShifts = VIN_DEFAULT_SHIFTS;
 let currentHistory = [];
 let showDelete = true;
 let currentSettings = VIN_DEFAULT_SETTINGS;
+let repairDb = [];
 
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
@@ -69,7 +70,8 @@ function render(history) {
     return;
   }
 
-  for (const entry of sorted) {
+  for (const raw of sorted) {
+    const entry = vinEntryView(raw, repairDb);
     const repeat = repeats.get(entry.timestamp);
 
     const li = document.createElement("li");
@@ -87,6 +89,11 @@ function render(history) {
     const badges = vinBuildModelColorBadges(entry);
     if (badges) {
       vinRow.appendChild(badges);
+    }
+
+    const levelBadge = vinBuildLevelBadge(entry.level);
+    if (levelBadge) {
+      vinRow.appendChild(levelBadge);
     }
 
     if (repeat) {
@@ -151,12 +158,12 @@ function updateCopyAllLabel() {
 copyDayBtn.addEventListener("click", (event) => {
   if (currentSettings.shiftOnlyMode) {
     const turno = vinCurrentShift(currentSettings);
-    vinCopyToClipboard(vinCopyTextList(currentHistory, `VINs do ${turno ? turno.label : "turno"}`), event.currentTarget);
+    vinCopyToClipboard(vinCopyTextList(currentHistory.map((e) => vinEntryView(e, repairDb)), `VINs do ${turno ? turno.label : "turno"}`), event.currentTarget);
     return;
   }
   const inicio = vinCycleStart(Date.now(), currentShifts);
   const doDia = currentHistory.filter((entry) => entry.timestamp >= inicio);
-  vinCopyToClipboard(vinCopyTextList(doDia, "VINs do dia"), event.currentTarget);
+  vinCopyToClipboard(vinCopyTextList(doDia.map((e) => vinEntryView(e, repairDb)), "VINs do dia"), event.currentTarget);
 });
 
 document.getElementById("openSettingsBtn").addEventListener("click", () => openPage("settings.html"));
@@ -166,6 +173,7 @@ async function load() {
   currentShifts = settings.shifts;
   currentSettings = settings;
   showDelete = settings.showDeleteButton !== false;
+  repairDb = await vinGetRepairDb();
   // Limpa o que ja venceu antes de mostrar a lista.
   render(await vinPurgeExpired());
 }
@@ -181,6 +189,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (changes[VIN_STORAGE_KEY]) {
     render(changes[VIN_STORAGE_KEY].newValue || []);
+  }
+  if (changes[VIN_REPAIR_DB_KEY]) {
+    repairDb = changes[VIN_REPAIR_DB_KEY].newValue || [];
+    vinGetHistory().then(render);
   }
 });
 

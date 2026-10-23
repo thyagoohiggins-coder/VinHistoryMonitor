@@ -50,6 +50,13 @@ purgeToggle.addEventListener("change", async () => {
 const repeatNoticeToggle = document.getElementById("repeatNoticeToggle");
 repeatNoticeToggle.addEventListener("change", () => vinSetSettings({ repeatNoticeEnabled: repeatNoticeToggle.checked }));
 
+const minCharsInput = document.getElementById("minCharsInput");
+minCharsInput.addEventListener("change", () => {
+  const valor = Math.min(Math.max(Math.round(Number(minCharsInput.value)) || 2, 1), 6);
+  minCharsInput.value = String(valor);
+  vinSetSettings({ repairMinChars: valor });
+});
+
 const prefixToggle = document.getElementById("prefixToggle");
 prefixToggle.addEventListener("change", () => vinSetSettings({ prefixSuggestEnabled: prefixToggle.checked }));
 
@@ -190,6 +197,15 @@ function renderRepairs(db) {
     count.className = "repair-uses";
     count.textContent = `${item.count}x`;
 
+    // Criticidade opcional; aparece so na lista de VINs (popup e pagina).
+    const level = document.createElement("select");
+    level.className = `level-select level-sel-${item.level || 0}`;
+    level.title = "Criticidade";
+    level.add(new Option("—", "0"));
+    for (let n = 1; n <= 4; n += 1) level.add(new Option(`N${n}`, String(n)));
+    level.value = String(item.level || 0);
+    level.addEventListener("change", () => repairSetLevel(item.key, Number(level.value)));
+
     const del = document.createElement("button");
     del.className = "delete-entry-btn";
     del.type = "button";
@@ -199,7 +215,7 @@ function renderRepairs(db) {
 
     // Remover um reparo so com a area protegida desbloqueada.
     del.hidden = !unlockedNow;
-    li.append(text, count, del);
+    li.append(text, level, count, del);
     repairListEl.appendChild(li);
   }
 }
@@ -315,6 +331,7 @@ async function iniciar() {
   showDeleteToggle.checked = settings.showDeleteButton !== false;
   shiftOnlyToggle.checked = settings.shiftOnlyMode === true;
   prefixToggle.checked = settings.prefixSuggestEnabled !== false;
+  minCharsInput.value = String(settings.repairMinChars || 2);
   repeatNoticeToggle.checked = settings.repeatNoticeEnabled !== false;
   renderShiftPurge(settings);
   renderPrefixes(await vinGetPrefixes());

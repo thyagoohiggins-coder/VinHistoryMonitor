@@ -18,6 +18,8 @@ let autoPurge = true;
 let showDelete = true;
 let purgeShiftIds = [];
 let currentSettings = VIN_DEFAULT_SETTINGS;
+let repairDb = [];
+const levelFilter = document.getElementById("levelFilter");
 
 function renderShiftCounts(history, shifts) {
   shiftCountsEl.innerHTML = "";
@@ -76,7 +78,8 @@ function applySettings(settings) {
   purgeShiftIds = settings.purgeShiftIds || [];
 }
 
-function buildEntry(entry, repeats) {
+function buildEntry(raw, repeats) {
+  const entry = vinEntryView(raw, repairDb);
   const repeat = repeats.get(entry.timestamp);
 
   const li = document.createElement("li");
@@ -91,6 +94,11 @@ function buildEntry(entry, repeats) {
   const badges = vinBuildModelColorBadges(entry);
   if (badges) {
     li.appendChild(badges);
+  }
+
+  const levelBadge = vinBuildLevelBadge(entry.level);
+  if (levelBadge) {
+    li.appendChild(levelBadge);
   }
 
   if (repeat) {
@@ -165,14 +173,19 @@ function applyFilters(history) {
   const to = timeToMinutes(timeTo.value);
   const reparo = filterText(repairFilter.value);
 
-  return history.filter(
-    (entry) =>
+  const nivel = levelFilter.value;
+
+  return history.filter((raw) => {
+    const entry = vinEntryView(raw, repairDb);
+    return (
       (!termo || vinCompareKey(entry.vin).includes(termo)) &&
       (!modelo || entry.model === modelo) &&
       (!cor || entry.color === cor) &&
       inTimeRange(entry.timestamp, from, to) &&
-      (!reparo || filterText(entry.repair).includes(reparo))
-  );
+      (!reparo || filterText(entry.repair).includes(reparo)) &&
+      (!nivel || String(entry.level) === nivel)
+    );
+  });
 }
 
 function hasActiveFilter() {
@@ -182,6 +195,7 @@ function hasActiveFilter() {
       colorFilter.value ||
       timeFrom.value ||
       timeTo.value ||
+      levelFilter.value ||
       repairFilter.value.trim()
   );
 }
@@ -241,7 +255,7 @@ function renderList() {
       copyShift.className = "entry-btn entry-btn-copy";
       copyShift.textContent = "Copiar turno";
       copyShift.addEventListener("click", () =>
-        vinCopyToClipboard(vinCopyTextList(grupo.entries, nome.textContent), copyShift)
+        vinCopyToClipboard(vinCopyTextList(grupo.entries.map((e) => vinEntryView(e, repairDb)), nome.textContent), copyShift)
       );
       lado.appendChild(copyShift);
     }
@@ -287,16 +301,16 @@ function render(history) {
 for (const el of [searchInput, repairFilter, timeFrom, timeTo]) {
   el.addEventListener("input", renderList);
 }
-for (const el of [modelFilter, colorFilter, timeFrom, timeTo]) {
+for (const el of [modelFilter, colorFilter, timeFrom, timeTo, levelFilter]) {
   el.addEventListener("change", renderList);
 }
 document.getElementById("copyFilteredBtn").addEventListener("click", (event) => {
   const title = hasActiveFilter() ? "VINs filtrados" : "Todos os VINs da lista";
-  vinCopyToClipboard(vinCopyTextList(applyFilters(currentHistory), title), event.currentTarget);
+  vinCopyToClipboard(vinCopyTextList(applyFilters(currentHistory).map((e) => vinEntryView(e, repairDb)), title), event.currentTarget);
 });
 
 clearFiltersBtn.addEventListener("click", () => {
-  for (const el of [searchInput, modelFilter, colorFilter, timeFrom, timeTo, repairFilter]) {
+  for (const el of [searchInput, modelFilter, colorFilter, timeFrom, timeTo, repairFilter, levelFilter]) {
     el.value = "";
   }
   renderList();
@@ -317,6 +331,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes[VIN_STORAGE_KEY]) {
     render(changes[VIN_STORAGE_KEY].newValue || []);
   }
+
+  if (changes[VIN_REPAIR_DB_KEY]) {
+    repairDb = changes[VIN_REPAIR_DB_KEY].newValue || [];
+    renderList();
+  }
 });
 
 async function iniciar() {
@@ -324,6 +343,7 @@ async function iniciar() {
   currentShifts = settings.shifts;
   applySettings(settings);
   renderPurgeInfo();
+  repairDb = await vinGetRepairDb();
   // Limpa o que ja venceu antes de mostrar a lista.
   render(await vinPurgeExpired());
 }
