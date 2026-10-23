@@ -15,7 +15,14 @@ const VIN_DEFAULT_PREFIXES = [
   { model: "C655 (CS55)", prefix: "95PJCL61DVB" },
   { model: "C928 (CS75)", prefix: "95PKDM81DVB" },
   { model: "T1E ADAS (Tiggo 7)", prefix: "95PEEL61DVB" },
+  { model: "T1E ICE LOW (Tiggo 7 Ice Low)", prefix: "95PEFL31DVB" },
+  { model: "T19 ICE LOW", prefix: "95PBFK31DVB" },
+  { model: "T18 (Tiggo 8 Ice)", prefix: "95PFEM61DVB" },
 ];
+// Prefixos que entraram em versoes novas: somados uma vez as listas ja
+// salvas (sem trazer de volta os que a pessoa removeu antes).
+const VIN_PREFIX_ADDED = [{ version: 2, prefixes: ["95PEFL31DVB", "95PBFK31DVB", "95PFEM61DVB"] }];
+const VIN_PREFIX_VERSION_KEY = "vinPrefixesVersion";
 const VIN_DEFAULT_PIN = "0000";
 // Horarios FIXOS dos turnos (nao sao configuraveis).
 const VIN_DEFAULT_SHIFTS = [
@@ -781,15 +788,38 @@ function vinBuildEntryButton(kind, onClick) {
 // ---------------------------------------------------------------------------
 
 async function vinGetPrefixes() {
-  const { [VIN_PREFIX_KEY]: list } = await chrome.storage.local.get(VIN_PREFIX_KEY);
-  return Array.isArray(list) ? list : VIN_DEFAULT_PREFIXES;
+  const { [VIN_PREFIX_KEY]: list, [VIN_PREFIX_VERSION_KEY]: versao = 1 } = await chrome.storage.local.get([
+    VIN_PREFIX_KEY,
+    VIN_PREFIX_VERSION_KEY,
+  ]);
+  if (!Array.isArray(list)) {
+    return VIN_DEFAULT_PREFIXES;
+  }
+  const novos = VIN_PREFIX_ADDED.filter((lote) => lote.version > versao);
+  if (novos.length === 0) {
+    return list;
+  }
+  const atual = [...list];
+  for (const lote of novos) {
+    for (const prefix of lote.prefixes) {
+      if (!atual.some((item) => item.prefix === prefix)) {
+        atual.push(VIN_DEFAULT_PREFIXES.find((item) => item.prefix === prefix));
+      }
+    }
+  }
+  const ultima = Math.max(...VIN_PREFIX_ADDED.map((lote) => lote.version));
+  await chrome.storage.local.set({ [VIN_PREFIX_KEY]: atual, [VIN_PREFIX_VERSION_KEY]: ultima });
+  return atual;
 }
 
 async function vinSetPrefixes(list) {
   const clean = list
     .map((item) => ({ model: (item.model || "").trim(), prefix: vinNormalize(item.prefix).replace(/\s+/g, "") }))
     .filter((item) => item.model || item.prefix);
-  await chrome.storage.local.set({ [VIN_PREFIX_KEY]: clean });
+  await chrome.storage.local.set({
+    [VIN_PREFIX_KEY]: clean,
+    [VIN_PREFIX_VERSION_KEY]: Math.max(...VIN_PREFIX_ADDED.map((lote) => lote.version)),
+  });
   return clean;
 }
 
