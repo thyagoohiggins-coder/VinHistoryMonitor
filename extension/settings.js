@@ -21,6 +21,9 @@ const shiftPurgeListEl = document.getElementById("shiftPurgeList");
 let frozen = false;
 let unlockedNow = false;
 let repairDbCache = [];
+const repairSearchInput = document.getElementById("repairSearch");
+const repairSearchCountEl = document.getElementById("repairSearchCount");
+repairSearchInput.addEventListener("input", () => renderRepairs(repairDbCache));
 
 // ---------------------------------------------------------------- VINs
 function renderDupes(history) {
@@ -184,7 +187,14 @@ function renderRepairs(db) {
   clearRepairsBtn.disabled = db.length === 0;
 
   repairListEl.innerHTML = "";
-  const sorted = [...db].sort((a, b) => a.text.localeCompare(b.text, "pt-BR", { sensitivity: "base" }));
+  // Pesquisa: parte do texto (sem acento/maiuscula) ou a criticidade "N1".."N4".
+  const termo = repairNormalize(repairSearchInput.value);
+  const nivel = /^n([1-4])$/.exec(termo);
+  const filtrados = !termo
+    ? db
+    : db.filter((item) => (nivel ? item.level === Number(nivel[1]) : item.key.includes(termo)));
+  repairSearchCountEl.textContent = termo ? `${filtrados.length} de ${db.length}` : "";
+  const sorted = [...filtrados].sort((a, b) => a.text.localeCompare(b.text, "pt-BR", { sensitivity: "base" }));
   for (const item of sorted) {
     const li = document.createElement("li");
     li.className = "repair-item";

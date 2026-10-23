@@ -47,6 +47,11 @@
       </details>
       <details class="bulk">
         <summary>Ver reparos aprendidos (e criticidade N1–N4)</summary>
+        <div class="repair-search">
+          <span class="repair-search-icon" aria-hidden="true">&#128269;</span>
+          <input id="repairSearch" type="search" placeholder="Pesquisar reparo... (ou N1, N2, N3, N4)" autocomplete="off" />
+          <span id="repairSearchCount" class="repair-search-count"></span>
+        </div>
         <ul id="repairList" class="repair-list"></ul>
         <div class="row-actions">
           <button id="exportRepairsBtn" class="link-btn" type="button">Exportar reparos (.txt)</button>
