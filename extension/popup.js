@@ -71,7 +71,7 @@ function render(history) {
   }
 
   for (const raw of sorted) {
-    const entry = vinEntryView(raw, repairDb);
+    const entry = vinEntryView(raw, repairDb, currentSettings);
     const repeat = repeats.get(entry.timestamp);
 
     const li = document.createElement("li");
@@ -158,12 +158,12 @@ function updateCopyAllLabel() {
 copyDayBtn.addEventListener("click", (event) => {
   if (currentSettings.shiftOnlyMode) {
     const turno = vinCurrentShift(currentSettings);
-    vinCopyToClipboard(vinCopyTextList(currentHistory.map((e) => vinEntryView(e, repairDb)), `VINs do ${turno ? turno.label : "turno"}`), event.currentTarget);
+    vinCopyToClipboard(vinCopyTextList(currentHistory.map((e) => vinEntryView(e, repairDb, currentSettings)), `VINs do ${turno ? turno.label : "turno"}`), event.currentTarget);
     return;
   }
   const inicio = vinCycleStart(Date.now(), currentShifts);
   const doDia = currentHistory.filter((entry) => entry.timestamp >= inicio);
-  vinCopyToClipboard(vinCopyTextList(doDia.map((e) => vinEntryView(e, repairDb)), "VINs do dia"), event.currentTarget);
+  vinCopyToClipboard(vinCopyTextList(doDia.map((e) => vinEntryView(e, repairDb, currentSettings)), "VINs do dia"), event.currentTarget);
 });
 
 document.getElementById("openSettingsBtn").addEventListener("click", () => openPage("settings.html"));

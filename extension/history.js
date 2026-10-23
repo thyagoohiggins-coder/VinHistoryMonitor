@@ -79,7 +79,7 @@ function applySettings(settings) {
 }
 
 function buildEntry(raw, repeats) {
-  const entry = vinEntryView(raw, repairDb);
+  const entry = vinEntryView(raw, repairDb, currentSettings);
   const repeat = repeats.get(entry.timestamp);
 
   const li = document.createElement("li");
@@ -176,14 +176,14 @@ function applyFilters(history) {
   const nivel = levelFilter.value;
 
   return history.filter((raw) => {
-    const entry = vinEntryView(raw, repairDb);
+    const entry = vinEntryView(raw, repairDb, currentSettings);
     return (
       (!termo || vinCompareKey(entry.vin).includes(termo)) &&
       (!modelo || entry.model === modelo) &&
       (!cor || entry.color === cor) &&
       inTimeRange(entry.timestamp, from, to) &&
       (!reparo || filterText(entry.repair).includes(reparo)) &&
-      (!nivel || String(entry.level) === nivel)
+      (!nivel || String(entry.rawLevel) === nivel)
     );
   });
 }
@@ -255,7 +255,7 @@ function renderList() {
       copyShift.className = "entry-btn entry-btn-copy";
       copyShift.textContent = "Copiar turno";
       copyShift.addEventListener("click", () =>
-        vinCopyToClipboard(vinCopyTextList(grupo.entries.map((e) => vinEntryView(e, repairDb)), nome.textContent), copyShift)
+        vinCopyToClipboard(vinCopyTextList(grupo.entries.map((e) => vinEntryView(e, repairDb, currentSettings)), nome.textContent), copyShift)
       );
       lado.appendChild(copyShift);
     }
@@ -306,7 +306,7 @@ for (const el of [modelFilter, colorFilter, timeFrom, timeTo, levelFilter]) {
 }
 document.getElementById("copyFilteredBtn").addEventListener("click", (event) => {
   const title = hasActiveFilter() ? "VINs filtrados" : "Todos os VINs da lista";
-  vinCopyToClipboard(vinCopyTextList(applyFilters(currentHistory).map((e) => vinEntryView(e, repairDb)), title), event.currentTarget);
+  vinCopyToClipboard(vinCopyTextList(applyFilters(currentHistory).map((e) => vinEntryView(e, repairDb, currentSettings)), title), event.currentTarget);
 });
 
 clearFiltersBtn.addEventListener("click", () => {

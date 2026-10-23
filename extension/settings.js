@@ -53,6 +53,14 @@ purgeToggle.addEventListener("change", async () => {
 const repeatNoticeToggle = document.getElementById("repeatNoticeToggle");
 repeatNoticeToggle.addEventListener("change", () => vinSetSettings({ repeatNoticeEnabled: repeatNoticeToggle.checked }));
 
+const levelBadgesToggle = document.getElementById("levelBadgesToggle");
+const levelMinSelect = document.getElementById("levelMinSelect");
+levelBadgesToggle.addEventListener("change", () => {
+  levelMinSelect.disabled = !levelBadgesToggle.checked;
+  vinSetSettings({ levelBadgesEnabled: levelBadgesToggle.checked });
+});
+levelMinSelect.addEventListener("change", () => vinSetSettings({ levelMinShown: Number(levelMinSelect.value) }));
+
 const minCharsInput = document.getElementById("minCharsInput");
 minCharsInput.addEventListener("change", () => {
   const valor = Math.min(Math.max(Math.round(Number(minCharsInput.value)) || 2, 1), 6);
@@ -342,6 +350,9 @@ async function iniciar() {
   shiftOnlyToggle.checked = settings.shiftOnlyMode === true;
   prefixToggle.checked = settings.prefixSuggestEnabled !== false;
   minCharsInput.value = String(settings.repairMinChars || 2);
+  levelBadgesToggle.checked = settings.levelBadgesEnabled !== false;
+  levelMinSelect.value = String(settings.levelMinShown || 1);
+  levelMinSelect.disabled = !levelBadgesToggle.checked;
   repeatNoticeToggle.checked = settings.repeatNoticeEnabled !== false;
   renderShiftPurge(settings);
   renderPrefixes(await vinGetPrefixes());

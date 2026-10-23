@@ -114,6 +114,25 @@
           <input type="checkbox" id="showDeleteToggle" />
         </label>
 
+        <h3 class="sub-title">Etiquetas de criticidade</h3>
+        <label class="switch-row">
+          <span>Mostrar etiquetas de criticidade (N1–N4) na lista de VINs</span>
+          <input type="checkbox" id="levelBadgesToggle" />
+        </label>
+        <label class="switch-row">
+          <span>Mostrar etiqueta só a partir de</span>
+          <select id="levelMinSelect" class="level-select">
+            <option value="1">N1 (todas)</option>
+            <option value="2">N2 (ignora N1)</option>
+            <option value="3">N3 (ignora N1 e N2)</option>
+            <option value="4">N4 (só N4)</option>
+          </select>
+        </label>
+        <p class="hint">
+          Vale a maior criticidade do VIN: se ela for menor que o mínimo escolhido, o VIN fica sem etiqueta.
+          O filtro de criticidade da lista continua encontrando todos.
+        </p>
+
         <h3 class="sub-title">Modelos e prefixos de VIN</h3>
         <label class="switch-row">
           <span>Sugerir modelo e prefixo ao clicar no campo VIN</span>

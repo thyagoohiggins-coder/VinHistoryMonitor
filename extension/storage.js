@@ -46,6 +46,10 @@ const VIN_DEFAULT_SETTINGS = {
   repeatNoticeEnabled: true,
   // Letras minimas digitadas para o banco de reparos sugerir.
   repairMinChars: 2,
+  // Etiquetas de criticidade (N1-N4) na lista e a menor que aparece
+  // (ex.: 3 = so N3 e N4 ganham etiqueta).
+  levelBadgesEnabled: true,
+  levelMinShown: 1,
   shifts: VIN_DEFAULT_SHIFTS,
 };
 
@@ -825,8 +829,9 @@ function vinRepairLevel(repairText, repairDb) {
 }
 
 // Copia do registro com: cripples sem os "reparo - ...", esses textos somados
-// ao reparo, e `level` (0 = sem criticidade).
-function vinEntryView(entry, repairDb) {
+// ao reparo, `rawLevel` (maior criticidade, 0 = nenhuma) e `level` (a que
+// aparece, conforme as configuracoes).
+function vinEntryView(entry, repairDb, settings = VIN_DEFAULT_SETTINGS) {
   const repairs = [];
   if ((entry.repair || "").trim()) repairs.push(entry.repair.trim());
   let parts = entry.parts;
@@ -842,7 +847,10 @@ function vinEntryView(entry, repairDb) {
     }
   }
   const repair = repairs.join(", ");
-  return { ...entry, repair, parts, level: vinRepairLevel(repair, repairDb) };
+  const rawLevel = vinRepairLevel(repair, repairDb);
+  // `level` e o que aparece (etiqueta e copiar); `rawLevel` serve ao filtro.
+  const mostra = settings.levelBadgesEnabled !== false && rawLevel >= (settings.levelMinShown || 1);
+  return { ...entry, repair, parts, rawLevel, level: mostra ? rawLevel : 0 };
 }
 
 // Etiqueta "N1".."N4" (null sem criticidade).
